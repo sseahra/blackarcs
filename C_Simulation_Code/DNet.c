@@ -5,7 +5,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "DNet.h"
-
+int RSTATE = 20000;
+int OSTATE = 20000;
 int TI;
 int STATE;
 FILE* vPtr;
@@ -45,6 +46,7 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
   */
 
   //Open file by provided name
+  
   int compare = strcmp(file, "stdout");
   FILE* fPtr;
   if(compare == 0)
@@ -115,10 +117,10 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
       }
 
       //Update the emergency phase
-      if(TI > 80) {
+      if(TI > RSTATE) {
 	STATE = 2;
       }
-      else if(TI > 20) {
+      else if(TI > OSTATE) {
 	STATE = 1;
       }
       else {
@@ -162,14 +164,16 @@ void day(pPerson* network, int size, double data[]) {
 
     if(state != 0) {
       switch(state) {
+        /*
       case 1: //Exposed
 	if(rands[rand_count] < data[2]) {
-	  //Pre-Symp
-	  final[i] = 2;
+	  //Symptomatic
+	  final[i] = 4;
 	}
 	rand_count += 1;
 	break;
-	
+        */
+        /*	
       case 2: //Pre-symptomatic
 	if(network[i]->counter < data[9]) {
 	  network[i]->counter += 1;
@@ -188,7 +192,9 @@ void day(pPerson* network, int size, double data[]) {
 	  rand_count += 1;
 	}
 	break;
-	
+	*/
+
+        /*
       case 3: //Asymptomatic
 	infect( network[i], data[1], data[5], final);
 
@@ -206,7 +212,7 @@ void day(pPerson* network, int size, double data[]) {
 	rand_count += 3;
 	
 	break;
-	
+	*/
       case 4: //Symptomatic
 	infect(network[i], data[1], data[5], final);
 
@@ -214,6 +220,7 @@ void day(pPerson* network, int size, double data[]) {
 	  //Removed
 	  final[i] = 5;
 	}
+        /*
 	else if(rands[rand_count+1] < data[7]) {
 	  if(rands[rand_count+2] < data[8]) {
 	    //Tested
@@ -221,9 +228,10 @@ void day(pPerson* network, int size, double data[]) {
 	    TI = TI + 1;
 	  }
 	}
+        */
 	rand_count += 3;
 	break;
-	
+	/*
       case 6: //Tested	
 	if(network[i]->counter == 2) {
 	  test(network[i], data[8], final);
@@ -240,7 +248,9 @@ void day(pPerson* network, int size, double data[]) {
 	}
 	
 	break;
-	
+	*/
+
+        /*
       case 7: //Tested Removed	
 	if(network[i]->counter == 2) {
 	  test(network[i], data[8], final);
@@ -249,6 +259,7 @@ void day(pPerson* network, int size, double data[]) {
 	  network[i]->counter += 1;
 	}
 	break;
+        */
       }
     }
   }
@@ -291,7 +302,7 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 
 	//Actually infect the person
-	final[person->connections[i]] = 1;
+	final[person->connections[i]] = 4;
       }
     }
   }
@@ -314,7 +325,7 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 
 	//Actually infect the person
-	final[person->connections[i]] = 1;
+	final[person->connections[i]] = 4;
       }
     }
   }
@@ -337,7 +348,7 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 
 	//Actually infect the person
-	final[person->connections[i]] = 1;
+	final[person->connections[i]] = 4;
       }
     }
   }
@@ -396,7 +407,7 @@ void event(pPerson* network, int size, int amount, double beta) {
 	    if (verbose == 1) {
 	      fprintf(vPtr, "%d,%d,", network[randsL[j]]->number, 3);
 	    }
-	    network[randsL[j]]->status = 1;
+	    network[randsL[j]]->status = 4;
 	  }
 	}
       }
