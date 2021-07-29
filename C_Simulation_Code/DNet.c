@@ -58,7 +58,7 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
       return;
     }
   }
-
+  fprintf(fPtr, "Format: Run number, #Susceptible, #Exposed, #PreSymp, #Symp, #Asymp, #Removed, #Tested, #TestedRemoved, #TotalNotSusceptible\n");
   //Set the total number of days per simulation
   int days = data[0];
 
@@ -94,7 +94,7 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
     if(verbose == 1) {
       snprintf(buffer, sizeof(buffer), "Simulation_Results/Run_%d.txt", i+1);
       vPtr = fopen(buffer, "w");
-      if(fPtr==NULL) {
+      if(vPtr==NULL) {
 	printf("Failed to open file.\n");
 	return;
       }
@@ -102,7 +102,7 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
     //Loop through the days
     for(int j = 0; j < days; j++) {
       if(verbose == 1) {
-	fprintf(vPtr, "%d,", j+1);
+	fprintf(vPtr, "%d", j+1);
       }
       
       //The day
@@ -294,11 +294,11 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 	
 	if((listed == 0) & (verbose == 1)) {
-	  fprintf(vPtr, "%d,", (person->number));
+	  fprintf(vPtr, ",%d", (person->number));
 	  listed = 1;
 	}
 	if (verbose == 1) {
-	  fprintf(vPtr, "%d,%d,", person->connections[i],person->con_type[i]);
+	  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
 	}
 
 	//Actually infect the person
@@ -317,11 +317,11 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 	
 	if((listed == 0) & (verbose == 1)) {
-	  fprintf(vPtr, "%d,", person->number);
+	  fprintf(vPtr, ",%d", person->number);
 	  listed = 1;
 	}
 	if (verbose == 1) {
-	  fprintf(vPtr, "%d,%d,", person->connections[i],person->con_type[i]);
+	  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
 	}
 
 	//Actually infect the person
@@ -340,21 +340,17 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 	
 	if((listed == 0) & (verbose == 1)) {
-	  fprintf(vPtr, "%d,", person->number);
+	  fprintf(vPtr, ",%d", person->number);
 	  listed = 1;
 	}
 	if (verbose == 1) {
-	  fprintf(vPtr, "%d,%d,", person->connections[i],person->con_type[i]);
+	  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
 	}
 
 	//Actually infect the person
 	final[person->connections[i]] = 4;
       }
     }
-  }
-
-  if(listed == 1) {
-    fprintf(vPtr, "\n");
   }
 }
 
@@ -400,21 +396,18 @@ void event(pPerson* network, int size, int amount, double beta) {
 	    }
 	    
 	    if((listed == 0) & (verbose == 1)) {
-	      fprintf(vPtr, "%d,", network[randsL[i]]->number);
+	      fprintf(vPtr, ",%d", network[randsL[i]]->number);
 	      listed = 1;
 	    }
 	    
 	    if (verbose == 1) {
-	      fprintf(vPtr, "%d,%d,", network[randsL[j]]->number, 3);
+	      fprintf(vPtr, ",%d,%d", network[randsL[j]]->number, 3);
 	    }
 	    network[randsL[j]]->status = 4;
 	  }
 	}
       }
     }
-  }
-  if(listed == 1) {
-    fprintf(vPtr, "\n");
   }
 }
 
@@ -424,7 +417,7 @@ void fPrintNetworkStatus(pPerson* network, int size, FILE* fPtr, int run) {
     status_count[network[i]->status] += 1;
   }
   if(status_count[0] < size-1) {
-    fprintf(fPtr, "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d", run, status_count[0], status_count[1],
+    fprintf(fPtr, "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n", run, status_count[0], status_count[1],
 	    status_count[2], status_count[3], status_count[4], status_count[5],
 	    status_count[6], status_count[7], size - status_count[0]);
   }
