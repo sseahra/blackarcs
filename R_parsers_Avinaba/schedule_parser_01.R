@@ -229,8 +229,8 @@ contact_matrix <- array(rep(0, no_of_agents * no_of_agents), dim = c(no_of_agent
 # 
 #    location_id: eventually assign different probability for different (location, contact_time) based on expert opinion from Public Health Officials 
 #                 also useful to quickly remove contact overlap by location_id (simulate closure of non-essential location types for extreme countermeasures)
-contact_pairlist_x_location <- data.frame(matrix(ncol = 4, nrow = 0))
-colnames(contact_pairlist_x_location) <- c("person_1", "person_2", "contact_time", "location_id")
+# contact_pairlist_x_location <- data.frame(matrix(ncol = 4, nrow = 0))
+# colnames(contact_pairlist_x_location) <- c("person_1", "person_2", "contact_time", "location_id")
 
 
 for(person1_id in 1:no_of_agents){
@@ -274,14 +274,14 @@ for(person1_id in 1:no_of_agents){
         
 
         # create new contact pair 
-        new_contact_pair <- data.frame(
-          person_1 = person1_id,
-          person_2 = person2_id, 
-          contact_time = total_contact_time,
-          location_id = this_location_id
-        )
+        # new_contact_pair <- data.frame(
+        #   person_1 = person1_id,
+        #   person_2 = person2_id, 
+        #   contact_time = total_contact_time,
+        #   location_id = this_location_id
+        # )
         # add to dataframe 
-        contact_pairlist_x_location <- rbind(contact_pairlist_x_location, new_contact_pair)
+        # contact_pairlist_x_location <- rbind(contact_pairlist_x_location, new_contact_pair)
         
       }
     }
@@ -289,6 +289,9 @@ for(person1_id in 1:no_of_agents){
   }
   # print("--")
 }
+
+# Stop the clock
+proc.time() - ptm
 
 # Get agents with max time overlap
 which(contact_matrix == max(contact_matrix), arr.ind = T) - 1 # to correlate with citisketch ids
@@ -307,13 +310,8 @@ pairwise_list <- which(contact_matrix > 0, arr.ind = TRUE, useNames = FALSE)
 # generate a dataframe  
 pairwise_list <- data.frame(pairwise_list)
 
-# add blank column
-pairwise_list <- data.frame(pairwise_list, contact_seconds = 0)
-
 # fill with contact_weight * 10 * 60 ~> (overestimated) contact seconds 
-for(i in 1:nrow(pairwise_list)) {
-  pairwise_list[i, 3] <- contact_matrix[ pairwise_list[i, 1], pairwise_list[i, 2]  ]
-}
+pairwise_list$contact_seconds <- contact_matrix[contact_matrix > 0]
 
 # sort by first agent for easier comparison
 pairwise_list <- pairwise_list[order(pairwise_list$X1),, drop=FALSE]
@@ -325,7 +323,10 @@ OUTPUT_PAIRLIST_FILENAME_TOTAL <- paste(OUTPUT_FILENAME, "-contact_matrix-total-
 # write.csv(pairwise_list, OUTPUT_PAIRLIST_FILENAME_TOTAL, row.names = FALSE, col.names = FALSE)
 write.table(pairwise_list, sep=",", OUTPUT_PAIRLIST_FILENAME_TOTAL, row.names = FALSE, col.names = FALSE)
 
+# write location list as CSV 
+OUTPUT_LOCATION_ID_FILENAME <- paste(OUTPUT_FILENAME, "-location_id", sep = "")
+distinct_locations$ID <- seq.int(nrow(distinct_locations))
+write.table(distinct_locations, sep=",", OUTPUT_LOCATION_ID_FILENAME, row.names = FALSE, col.names = FALSE)
 
 
-# Stop the clock
-proc.time() - ptm
+

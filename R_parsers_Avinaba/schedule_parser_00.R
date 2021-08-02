@@ -1,3 +1,6 @@
+# Start the clock!
+ptm <- proc.time()
+
 # Get the data directory from readtext
 # JSON_FILENAME <-'scenarioDane/schedules-1627398411898.json'
 # JSON_FILENAME <-'scenarioAvin/schedules-1627418843229.json'
@@ -100,7 +103,7 @@ distinct_location_count <- count(distinct_locations)[1, "n"]
 # -> as of now bits are getting coerced into integers for list or array or matrix types
 #
 #
-# further blurring resolution to 10 minute to quickly test the idea with integer arrays ~ 10 GB
+# further blurring resolution to 10 minute to quickly test the idea with logical (int32) arrays ~ 10 GB
 
 time_slice <- (24 * 60) / 10
 time_slice_in_seconds <- 60 * 10
@@ -272,23 +275,23 @@ for(i in 1:length(schedules)){
 
 
 # Get list of agents for each location
-list_of_agents_at_loc <- list()
-for(j in 1:distinct_location_count){
+# list_of_agents_at_loc <- list()
+# for(j in 1:distinct_location_count){
   
-  #flush the result
-  single_loc_x_agent <- array(rep(FALSE, no_of_agents),
-                              dim = no_of_agents)
-  for(k in 1:time_slice){
-    single_loc_x_agent <- single_loc_x_agent | agent_x_loc_x_time[ , j, k]
-  }
-  
+  # flush the result
+  # single_loc_x_agent <- array(rep(FALSE, no_of_agents),
+  #                             dim = no_of_agents)
+  # for(k in 1:time_slice){
+    # single_loc_x_agent <- single_loc_x_agent | agent_x_loc_x_time[ , j, k]
+  # }
+   
   # Debug:
   # print(j) # location id
   # print(which(single_loc_x_agent == TRUE))
   # print("--")
   
-  list_of_agents_at_loc[[j]] <- which(single_loc_x_agent == TRUE)
-}
+  # list_of_agents_at_loc[[j]] <- which(single_loc_x_agent == TRUE)
+# }
 
 # Trace contact matrix per time-slice
 for(k in 1:time_slice){
@@ -320,7 +323,7 @@ for(k in 1:time_slice){
           }
           
           contact_matrix[outer_agent_id, inner_agent_id] <- 
-            contact_matrix[outer_agent_id, inner_agent_id] + contact_weight
+            contact_matrix[outer_agent_id, inner_agent_id] + contact_weight * time_slice_in_seconds
           
           contact_matrix[inner_agent_id, outer_agent_id] <- contact_matrix[outer_agent_id, inner_agent_id] # contact is bi-directional
         }
@@ -334,10 +337,15 @@ for(k in 1:time_slice){
 which(contact_matrix == max(contact_matrix), arr.ind = T) - 1 # to correlate with citisketch ids
 
 # Generating bitmap for visual inspection 
-image(contact_matrix)
+# image(contact_matrix)
 
 # Write full contact matrices 
 write_json(contact_matrix, OUTPUT_FILENAME_TOTAL)
+
+# Stop the clock (contact matrix written)
+proc.time() - ptm
+
+
 
 
 
@@ -350,13 +358,8 @@ pairwise_list <- which(contact_matrix > 0, arr.ind = TRUE, useNames = FALSE)
 # generate a dataframe  
 pairwise_list <- data.frame(pairwise_list)
 
-# add blank column
-pairwise_list <- data.frame(pairwise_list, contact_seconds = 0)
-
 # fill with contact_weight * 10 * 60 ~> (overestimated) contact seconds 
-for(i in 1:nrow(pairwise_list)) {
-  pairwise_list[i, 3] <- contact_matrix[ pairwise_list[i, 1], pairwise_list[i, 2]  ]  * time_slice_in_seconds
-}
+pairwise_list$contact_seconds <- contact_matrix[contact_matrix > 0]
 
 # sort by first agent for easier comparison
 pairwise_list <- pairwise_list[order(pairwise_list$X1),, drop=FALSE]
@@ -367,3 +370,11 @@ OUTPUT_PAIRLIST_FILENAME_TOTAL <- paste(OUTPUT_FILENAME, "-contact_matrix-total.
 # write as CSV 
 # write.csv(pairwise_list, OUTPUT_PAIRLIST_FILENAME_TOTAL, row.names = FALSE, col.names = FALSE)
 write.table(pairwise_list, sep=",", OUTPUT_PAIRLIST_FILENAME_TOTAL, row.names = FALSE, col.names = FALSE)
+
+
+# write location list as CSV 
+OUTPUT_LOCATION_ID_FILENAME <- paste(OUTPUT_FILENAME, "-location_id-discrete.csv", sep = "")
+
+# Add location_id as column
+distinct_locations$ID <- seq.int(nrow(distinct_locations))
+write.table(distinct_locations, sep=",", OUTPUT_LOCATION_ID_FILENAME, row.names = FALSE, col.names = FALSE)
