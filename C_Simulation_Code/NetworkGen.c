@@ -13,13 +13,14 @@ pPerson mallocPerson() {
   }
 
   pThis->number = 0;
-  pThis->age = 0;
+  pThis->age = 1;
   pThis->cCount = 0;
   pThis->status = 0;
   pThis->counter = 0;
   for(int i = 0; i < MAX_C; i++) {
     pThis->connections[i] = -1;
     pThis->con_type[i] = -1;
+    pThis->times[i]=-1;
   }
 
   return(pThis);
@@ -98,6 +99,45 @@ pPerson* createNetwork(int size) {
   free(hNew);
   free(cpos);
   return(baseNet);
+}
+pPerson* importNetwork(char* file) {
+  //printf("-----Importing Network-----\n");
+  FILE* fp = fopen(file, "r");
+  if(fp==NULL) {
+    printf("Failed to open file.\n");
+    return(0);
+  }
+  int size;
+  char line[100];
+  char* token;
+  fgets(line, 100, fp);
+  size = atoi(line);
+  
+  pPerson *baseNet = mallocNetwork(size);
+
+  int start;
+  int end;
+  int time;
+  char delim[] = " ,.";
+  while(fgets(line, 100, fp) != NULL) {
+    token = strtok(line, delim);
+    start = atoi(token)-1;
+    token = strtok(NULL, delim);
+    end  = atoi(token)-1;
+    token = strtok(NULL, delim);
+    time = atoi(token);
+    addConnection(baseNet, start, end, 0, time);
+  }
+  printf("-----Completed Network Importing-----\n");
+  fclose(fp);
+  return(baseNet);
+}
+
+void addConnection(pPerson* base, int i, int j, int type, int time) {
+  base[i]->connections[base[i]->cCount] = j;
+  base[i]->con_type[base[i]->cCount] = type;
+  base[i]->times[base[i]->cCount] = time;
+  base[i]->cCount += 1;
 }
 
 void copyNetwork(pPerson* dest, pPerson* source, int size) {

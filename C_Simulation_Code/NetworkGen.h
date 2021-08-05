@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#define MAX_C 200
+#define MAX_C 500
 
 typedef char* String;
 
@@ -13,12 +13,15 @@ typedef struct person {
   int counter;
   int connections[MAX_C];
   int con_type[MAX_C];
+  int times[MAX_C];
 } Person, *pPerson;
 
 pPerson mallocPerson();
 void copyPerson(pPerson dest, pPerson src);
 pPerson* mallocNetwork(int size);
 pPerson* createNetwork(int size);
+pPerson* importNetwork(char* file);
+void addConnection(pPerson* network, int i, int j, int type, int time);
 void copyNetwork(pPerson* dest, pPerson* source, int size);
 pPerson* createCopy(pPerson* src, int size);
 void printNetwork(pPerson* network, int size, String fileName);
