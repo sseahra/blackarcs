@@ -16,6 +16,8 @@ TARGETS = NetTest DNetTest test.txt DNet.txt
 #Data file input
 FILE = data.txt
 
+FILE2 = testData.csv
+
 #Rule to fix .o file creation
 %.o:%.c
 	gcc $(CFLAGS) $< -o $@
@@ -25,12 +27,17 @@ NetTestFull: NetTest NetTestRun
 
 DNetTestFull: DNetTest DNetTestRun 
 
+DNetTestImport: DNetTest DNetTestRunI
+
 #Run the compiled files
 NetTestRun:
 	./NetTest $(FILE)
 	
 DNetTestRun:
 	./DNetTest $(FILE)
+
+DNetTestRunI:
+	./DNetTest $(FILE) $(FILE2)
 	
 # Compile network test
 NetTest: .FORCE
@@ -52,9 +59,10 @@ help:
 	@echo ' TERM - MEANING'
 	@echo ' Net - Just Network'
 	@echo ' DNet - Simulation [Dynamic Network]'
+	@echo ' Import - Import a network when running'
 	@echo ' '
 	@echo ' TASK - COMMAND'
-	@echo ' Compile and Run - NetTestFull and DNetTestFull'
+	@echo ' Compile and Run - NetTestFull, DNetTestFull, and DNetTestImport'
 	@echo ' Compile - NetTest and DNetTest'
 	@echo ' Run - NetTestRun and DNetTestRun'
 	@echo ' Remove Files - clean'

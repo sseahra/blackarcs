@@ -1,0 +1,13 @@
+"susceptible",1
+"received_dose1",2
+"received_dose2",3
+"latent_infections_isolated",4
+"pre_symptomatic_isolated",5
+"latent_infections_not_isolated",6
+"pre_symptomatic_non_isolated",7
+"mild_isolated",8
+"hospitalized",9
+"hospitalized_ICU",10
+"mild_non_isolated",11
+"recovered",12
+"dead",13

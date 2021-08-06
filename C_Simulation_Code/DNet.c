@@ -369,10 +369,11 @@ void test(pPerson person, double test, int* final) {
 void event(pPerson* network, int size, int amount, double beta) {
   int randsL[amount];
   for(int i = 0; i < amount; i++) {
-    randsL[i] = (double)rand() / (double)size;
+    randsL[i] = rand() % size;
   }
 
   int listed = 0;
+
 
   //Check if someone is infected
   for (int i = 0; i < amount; i++) {
@@ -381,7 +382,7 @@ void event(pPerson* network, int size, int amount, double beta) {
     //If infected, see if infects others at event
     if((check == 1) | (check == 2) | (check == 3)) {
       double randsI[amount];
-      
+
       //Set up randoms
       for(int k = 0; k < amount; k++) {
 	randsI[k] = rand() / ((double) RAND_MAX);
