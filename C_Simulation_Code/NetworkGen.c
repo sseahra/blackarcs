@@ -20,7 +20,7 @@ pPerson mallocPerson() {
   for(int i = 0; i < MAX_C; i++) {
     pThis->connections[i] = -1;
     pThis->con_type[i] = -1;
-    pThis->times[i]=-1;
+    pThis->times[i]=1;
   }
 
   return(pThis);
@@ -112,7 +112,6 @@ pPerson* importNetwork(char* file) {
   char* token;
   fgets(line, 100, fp);
   size = atoi(line);
-  
   pPerson *baseNet = mallocNetwork(size);
 
   int start;
@@ -126,9 +125,11 @@ pPerson* importNetwork(char* file) {
     end  = atoi(token)-1;
     token = strtok(NULL, delim);
     time = atoi(token);
-    addConnection(baseNet, start, end, 0, time);
+    if(time != 0) {
+      addConnection(baseNet, start, end, 0, time);
+    }
   }
-  printf("-----Completed Network Importing-----\n");
+  //printf("-----Completed Network Importing-----\n");
   fclose(fp);
   return(baseNet);
 }

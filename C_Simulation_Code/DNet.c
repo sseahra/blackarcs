@@ -7,6 +7,7 @@
 #include "DNet.h"
 int RSTATE = 20000;
 int OSTATE = 20000;
+int infections = 0;
 int TI;
 int STATE;
 FILE* vPtr;
@@ -84,25 +85,28 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
     fflush(stdout);
 
     //Pick the index of a random person to be infected and set infected to 1
-    int randval = rand() % size;
-    testwork[randval]->status = 4;
+    for(int z = 0; z < 6; z++) {
+      int randval = rand() % size;
+      testwork[randval]->status = 4;
+    }
     TI = 1;
     STATE = 0;
 
     //If verbose, save data
     char buffer[100];
     if(verbose == 1) {
-      snprintf(buffer, sizeof(buffer), "Simulation_Results/Run_%d.txt", i+1);
+      snprintf(buffer, sizeof(buffer), "Simulation_Results/Run_%d.csv", i+1);
       vPtr = fopen(buffer, "w");
       if(vPtr==NULL) {
 	printf("Failed to open file.\n");
 	return;
       }
+      fprintf(vPtr,"Day, Count\n");
     }
     //Loop through the days
     for(int j = 0; j < days; j++) {
       if(verbose == 1) {
-	fprintf(vPtr, "%d", j+1);
+	fprintf(vPtr, "%d, ", j+1);
       }
       
       //The day
@@ -126,7 +130,10 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
       else {
 	STATE = 0;
       }
-      fprintf(vPtr, "\n");
+
+      if(verbose == 1) {
+        fprintf(vPtr, "%d\n", infections);
+      }
     }
 
     //Close verbose file
@@ -150,6 +157,7 @@ void simulate(pPerson* orig, int size, int runs, String file, double data[], int
 void day(pPerson* network, int size, double data[]) {
   double rands[size * 2];
   int rand_count = 0;
+  infections = 0;
   for(int i = 0; i < size*2; i++) {
     rands[i] = rand() / ((double) RAND_MAX);
   }
@@ -286,7 +294,7 @@ void infect(pPerson person, double beta, double rate, int* final) {
     //Loop through the connections
     for(int i = 0; i < person->cCount; i++) {
       //Conditions of if person is suscetible, if the random works, and if the connection type if valid (NA for Y)
-      if((final[person->connections[i]] == 0) & (randsL[i] < (beta*lrate))) {
+      if((final[person->connections[i]] == 0) & (randsL[i] < (beta*lrate*tanh(person->times[i])))) {
 	
 	//If verbose, print out the index of who was infected
 	if(edit == 0) {
@@ -294,15 +302,16 @@ void infect(pPerson person, double beta, double rate, int* final) {
 	}
 	
 	if((listed == 0) & (verbose == 1)) {
-	  fprintf(vPtr, ",%d", (person->number));
+	//  fprintf(vPtr, ",%d", (person->number));
 	  listed = 1;
 	}
-	if (verbose == 1) {
-	  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
-	}
+	//if (verbose == 1) {
+	//  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
+	//}
 
 	//Actually infect the person
 	final[person->connections[i]] = 4;
+        infections = infections + 1;
       }
     }
   }
@@ -310,22 +319,23 @@ void infect(pPerson person, double beta, double rate, int* final) {
   //Infections for ORANGE
   else if(STATE == 1) {
     for(int i = 0; i < person->cCount; i++) {
-      if((final[person->connections[i]] == 0) & (randsL[i] < (beta*lrate)) & (person->con_type[i] != 2)) {
+      if((final[person->connections[i]] == 0) & (randsL[i] < (beta*lrate*tanh(person->times[i]))) & (person->con_type[i] != 2)) {
 	//If verbose, print out the index of who was infected
 	if(edit == 0) {
 	  edit = 1;
 	}
 	
 	if((listed == 0) & (verbose == 1)) {
-	  fprintf(vPtr, ",%d", person->number);
+	//  fprintf(vPtr, ",%d", person->number);
 	  listed = 1;
 	}
-	if (verbose == 1) {
-	  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
-	}
+	//if (verbose == 1) {
+	//  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
+	//}
 
 	//Actually infect the person
 	final[person->connections[i]] = 4;
+        infections = infections + 1;
       }
     }
   }
@@ -333,22 +343,23 @@ void infect(pPerson person, double beta, double rate, int* final) {
   //Infections for RED
   else if(STATE == 2) {
     for(int i = 0; i < person->cCount; i++) {
-      if((final[person->connections[i]] == 0) & (randsL[i] < (beta*lrate)) & (person->con_type[i] == 2)) {
+      if((final[person->connections[i]] == 0) & (randsL[i] < (beta*lrate*tanh(person->times[i]))) & (person->con_type[i] == 2)) {
 	//If verbose, print out the index of who was infected
 	if(edit == 0) {
 	  edit = 1;
 	}
 	
 	if((listed == 0) & (verbose == 1)) {
-	  fprintf(vPtr, ",%d", person->number);
+	  //fprintf(vPtr, ",%d", person->number);
 	  listed = 1;
 	}
-	if (verbose == 1) {
-	  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
-	}
+	//if (verbose == 1) {
+	//  fprintf(vPtr, ",%d,%d", person->connections[i],person->con_type[i]);
+	//}
 
 	//Actually infect the person
 	final[person->connections[i]] = 4;
+        infections = infections + 1;
       }
     }
   }
