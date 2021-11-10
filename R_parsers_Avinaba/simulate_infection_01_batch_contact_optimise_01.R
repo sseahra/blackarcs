@@ -5,7 +5,7 @@ library(dplyr) # for dataframe utitlities
 library(iterators)
 
 
-SIM_SCRIPT_NAME = 'simulate_infection_01_batch_contact_001_optimise_01'
+SIM_SCRIPT_NAME = 'simulate_infection_01_batch_contact_optimise_01_025_for_60d'
 
 #SIM_SCRIPT_NAME = 'simulate_infection_01_batch_contact_optimise_01'
 
@@ -259,9 +259,9 @@ getInfection_probability <- function(contact_time) {
   
   TIME_TILL_76p_CHANCE <- 1200 # seconds (20 minutes)
   
-  MAX_CHANCE <- 0.045 # About 3.4% chance by 20 minutes, to max 4.5% by Inf
+  # MAX_CHANCE <- 0.045 # About 3.4% chance by 20 minutes, to max 4.5% by Inf
   # MAX_CHANCE <- 0.035 
-  # MAX_CHANCE <- 0.025
+  MAX_CHANCE <- 0.025
   # MAX_CHANCE <- 0.015
   # MAX_CHANCE <- 0.005
   # MAX_CHANCE <- 0.002
@@ -349,8 +349,9 @@ contact_matrix <- nextElem(contact_matrix_iterator)
 # Initialize state 
 TOTAL_STATES <- length(colnames(transition_matrix))
 
-#TOTAL_SIMULATION_DAYS <- 30
-TOTAL_SIMULATION_DAYS <- 60 
+TOTAL_SIMULATION_DAYS <- 30
+# TOTAL_SIMULATION_DAYS <- 60
+# TOTAL_SIMULATION_DAYS <- 365
 
 TOTAL_SIMULATED_PERSONS <- max(contact_matrix_as_pairlist[1:2])
 
@@ -390,7 +391,8 @@ STATELIST_NEW_CASES <- which(colnames(transition_matrix) == "latent_infections_i
 
 
 
-COUNT_FIRST_DAY_DISEASE_IMPORT <- 5 
+# COUNT_FIRST_DAY_DISEASE_IMPORT <- 5
+COUNT_FIRST_DAY_DISEASE_IMPORT <- 1 # To try and mimic Campbellton
 
 DAILY_NEW_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
 
