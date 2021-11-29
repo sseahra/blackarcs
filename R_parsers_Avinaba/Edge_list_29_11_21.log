@@ -1,0 +1,26 @@
+Change log: 
+
+CONST_v_h to 0.0160
+CONST_v_c to 0.0028
+CONST_v_m to 0.9560
+CONST_p to 0.45
+
+Returns edge weights as follows: 
+
+ if infected, then (1 - q) = 0.9306
+ if infected, then q = 0.0694
+ (1 → 3) = 0.4
+ (2 → 4) = 0.4
+ (3 → 5) = 0.21032
+ (3 → 6) = 0.17208
+ (3 → 7) = 0.0064
+ (3 → 8) = 0.00112
+ (4 → 6) = 0.3824
+ (4 → 7) = 0.0064
+ (4 → 8) = 0.00112
+ (6 → r) = 0.2
+ (5 → r) = 0.2
+ (7 → r) = 0.09
+ (8 → r) = 0.05
+ (7 → d) = 0.01
+ (8 → d) = 0.05

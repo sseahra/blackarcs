@@ -4,17 +4,19 @@ ptm <- proc.time()
 library(dplyr) # for dataframe utitlities
 library(iterators)
 
-# Setup large pool of random samples outside the script
-# Note: Introduced about 8 GB of memory and increasd overall runtime 
-#
-# TODO; Understand root cause, possibilities include lack of default optimisations when sharing a global data-structure 
-#
-# COUNT_RANDOM_SAMPLE_LIST <- 2^30 # = 1073741824, when divided by (5000 C 2) ~> 85 (should hold pessimistacly for 5000 agents for 86 days)
-# random_unifrom_sample_list <- runif(COUNT_RANDOM_SAMPLE_LIST)
-# random_sample_iterator <- 1 # Counter to re-initialise when exhausted 
 
-# SIM_SCRIPT_NAME = 'complex_model_v00_025_for_365d_1case'
-SIM_SCRIPT_NAME = 'complex_model_vcalib00_010_for_90d_Nov29'
+SIM_SCRIPT_NAME = 'complex_model_v01_w_simulated_event_20_to_24_010_for_90d'
+
+# Event assumptions 
+EVENT_START_DATE <- 20 # starting sim day 
+EVENT_END_DATE <- 24 # ending sim day 
+
+
+# if on the current simulation day index the number of active cases is 100 or beyond switch to contact matrices sans schools 
+# CONST_MAX_ACTIVE_CASES_TO_SHUTDOWN = 100
+# CONST_MAX_ACTIVE_CASES_TO_SHUTDOWN = 50
+# CONST_MAX_ACTIVE_CASES_TO_SHUTDOWN = 25
+
 
 # Calibration mode: 
 # TOTAL_SIMULATION_DAYS <- 10
@@ -36,6 +38,7 @@ CONST_MAX_CHANCE <- 0.010
 # CONST_MAX_CHANCE <- 0.002
 # CONST_MAX_CHANCE <- 0.001
 
+
 # input files 
 
 # contact matrix (pairlist)
@@ -43,6 +46,9 @@ CONTACT_MATRIX_DIR <- 'scenarioAvin_0_to_30_control'
 
 LIST_OF_CONTACT_MATRIX_FILEPATH  <- 
   list.files(CONTACT_MATRIX_DIR, full.names = TRUE, pattern="contact\\_matrix\\-total\\-real\\.csv$", ignore.case = TRUE)
+
+# LIST_OF_CONTACT_MATRIX_SANS_SCHOOL_FILEPATH  <- 
+#   list.files(CONTACT_MATRIX_DIR, full.names = TRUE, pattern="contact\\_matrix\\-without\\-commercial\\-real\\.csv$", ignore.case = TRUE)
 
 
 
@@ -179,12 +185,10 @@ voc_df <- rbind(voc_df, voc_04)
   # New Brunswick has the following active variants proportions
   #  - Alpha, B.1.1.7, 0.9 %  
   #  - Delta,  B.1.617.2, 98.9 %
+
   
-  # Calibration mode: 
-  voc_df <- voc_df %>% mutate_cond(`WHO label` == "Wild" & `variant` == "A", 'Proportion' = 100.0)
-  
-  # voc_df <- voc_df %>% mutate_cond(`WHO label` == "Alpha" & `variant` == "B.1.1.7", 'Proportion' = 0.9)
-  # voc_df <- voc_df %>% mutate_cond(`WHO label` == "Delta" & `variant` == "B.1.617.2", 'Proportion' = 98.9)
+  voc_df <- voc_df %>% mutate_cond(`WHO label` == "Alpha" & `variant` == "B.1.1.7", 'Proportion' = 0.9)
+  voc_df <- voc_df %>% mutate_cond(`WHO label` == "Delta" & `variant` == "B.1.617.2", 'Proportion' = 98.9)
   
   # Debug: infectivity proportions post transition
   # voc_df <- voc_df %>% mutate_cond(`WHO label` == "Wild" & `variant` == "A", 'Proportion' = 33.34)
@@ -237,71 +241,46 @@ voc_df <- rbind(voc_df, voc_04)
 
 library(igraph)
 
-# Calibration mode: 
-disease_model <- graph( edges = c("susceptible", "00_latent_infections_not_isolated", # φ(1, 0) - (1 - q) → 1)
-                                  "susceptible", "00_latent_infections_isolated", # φ(1, 0) - (q) → 2)
-                                  
-                                  "00_latent_infections_not_isolated", "00_pre_symptomatic_non_isolated", # π(1 → 3)
-                                  "00_latent_infections_isolated", "00_pre_symptomatic_isolated", # π(2 → 4)
-                   
-                                  "00_pre_symptomatic_non_isolated", "00_mild_non_isolated", # π(3 → 5)
-                                  "00_pre_symptomatic_non_isolated", "00_mild_isolated", # π(3 → 6)
-                                  "00_pre_symptomatic_non_isolated", "00_hospitalized", # π(3 → 7)
-                                  "00_pre_symptomatic_non_isolated", "00_hospitalized_ICU", # π(3 → 8)
-                   
-                                  "00_pre_symptomatic_isolated", "00_mild_isolated", # π(4 → 6)
-                                  "00_pre_symptomatic_isolated", "00_hospitalized", # π(4 → 7)
-                                  "00_pre_symptomatic_isolated", "00_hospitalized_ICU", # π(4 → 8)
-                   
-                                  "00_mild_isolated", "00_recovered", # π(5 → r)
-                                  "00_mild_non_isolated", "00_recovered", # π(6 → r)
-                                  "00_hospitalized", "00_recovered", # π(7 → r)
-                                  "00_hospitalized_ICU", "00_recovered", # π(8 → r)
-                   
-                                  "00_hospitalized", "00_dead", # π(7 → d)
-                                  "00_hospitalized_ICU", "00_dead"), # π(8 → d)
-                        directed = TRUE)
-
 # Vaccinations
-# disease_model <- graph( edges = c("susceptible","received_dose1",  
-#                                   "received_dose1","received_dose2"), directed = TRUE)
-# 
-# # Vaccination/day parameters, look up @Vaccination Rates
-# E(disease_model, path = c("susceptible", "received_dose1") )$weight <- 0.0
-# E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
-# 
-# E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- 0.0
-# E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+disease_model <- graph( edges = c("susceptible","received_dose1",  
+                                  "received_dose1","received_dose2"),directed = TRUE)
+
+# Vaccination/day parameters, look up @Vaccination Rates
+E(disease_model, path = c("susceptible", "received_dose1") )$weight <- 0.0
+E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+
+E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- 0.0
+E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
 
 # Adding weight value to edge labels for visual inspection
 # E(disease_model)$label <- paste(E(disease_model)$weight, "/day")
 
-# plot(disease_model)
+plot(disease_model)
 
 
 {
 # Infection states for 0 doses: 
-  # disease_model <- disease_model+  
-  #                  graph( edges = c("00_latent_infections_not_isolated", "00_pre_symptomatic_non_isolated", # π(1 → 3)
-  #                                   "00_latent_infections_isolated", "00_pre_symptomatic_isolated", # π(2 → 4)
-  #                                   
-  #                                   "00_pre_symptomatic_non_isolated", "00_mild_non_isolated", # π(3 → 5)
-  #                                   "00_pre_symptomatic_non_isolated", "00_mild_isolated", # π(3 → 6)
-  #                                   "00_pre_symptomatic_non_isolated", "00_hospitalized", # π(3 → 7)
-  #                                   "00_pre_symptomatic_non_isolated", "00_hospitalized_ICU", # π(3 → 8)
-  #                                   
-  #                                   "00_pre_symptomatic_isolated", "00_mild_isolated", # π(4 → 6)
-  #                                   "00_pre_symptomatic_isolated", "00_hospitalized", # π(4 → 7)
-  #                                   "00_pre_symptomatic_isolated", "00_hospitalized_ICU", # π(4 → 8)
-  #                                   
-  #                                   "00_mild_isolated", "00_recovered", # π(5 → r)
-  #                                   "00_mild_non_isolated", "00_recovered", # π(6 → r)
-  #                                   "00_hospitalized", "00_recovered", # π(7 → r)
-  #                                   "00_hospitalized_ICU", "00_recovered", # π(8 → r)
-  #                                   
-  #                                   "00_hospitalized", "00_dead", # π(7 → d)
-  #                                   "00_hospitalized_ICU", "00_dead"), # π(8 → d)
-  #                         directed = TRUE)
+  disease_model <- disease_model+  
+                   graph( edges = c("00_latent_infections_not_isolated", "00_pre_symptomatic_non_isolated", # π(1 → 3)
+                                    "00_latent_infections_isolated", "00_pre_symptomatic_isolated", # π(2 → 4)
+                                    
+                                    "00_pre_symptomatic_non_isolated", "00_mild_non_isolated", # π(3 → 5)
+                                    "00_pre_symptomatic_non_isolated", "00_mild_isolated", # π(3 → 6)
+                                    "00_pre_symptomatic_non_isolated", "00_hospitalized", # π(3 → 7)
+                                    "00_pre_symptomatic_non_isolated", "00_hospitalized_ICU", # π(3 → 8)
+                                    
+                                    "00_pre_symptomatic_isolated", "00_mild_isolated", # π(4 → 6)
+                                    "00_pre_symptomatic_isolated", "00_hospitalized", # π(4 → 7)
+                                    "00_pre_symptomatic_isolated", "00_hospitalized_ICU", # π(4 → 8)
+                                    
+                                    "00_mild_isolated", "00_recovered", # π(5 → r)
+                                    "00_mild_non_isolated", "00_recovered", # π(6 → r)
+                                    "00_hospitalized", "00_recovered", # π(7 → r)
+                                    "00_hospitalized_ICU", "00_recovered", # π(8 → r)
+                                    
+                                    "00_hospitalized", "00_dead", # π(7 → d)
+                                    "00_hospitalized_ICU", "00_dead"), # π(8 → d)
+                          directed = TRUE)
 
 # For people who are not vaccinated: Infection transition/day parameters 
 # CONSTANT_NOT_VACCINATED <- 0.1 
@@ -316,23 +295,16 @@ CONST_rho <- 1/10        # inverse of mean length of non-ICU based hospitalizati
 CONST_sigma <- 1/10      # inverse of mean length of ICU based hospitalization 
 CONST_ita <- 1/5         # inverse of mean length of of asymptomatic/mild symptomatic period
 
-# Calibrating with Robert's help
-CONST_v_m <- 0.956     # fraction of cases never hospitalized (-> mild)
-CONST_v_c <- 0.0028      # fraction of cases hospitalized in ICU for part of stay 
-CONST_v_h <- 0.016       # fraction of cases hospitalized but never in ICU
-
-# CONST_v_m <- 0.960       # fraction of cases never hospitalized (-> mild)
-# CONST_v_c <- 0.006       # fraction of cases hospitalized in ICU for part of stay 
-# CONST_v_h <- 0.034       # fraction of cases hospitalized but never in ICU
+CONST_v_m <- 0.960       # fraction of cases never hospitalized (-> mild)
+CONST_v_c <- 0.006       # fraction of cases hospitalized in ICU for part of stay 
+CONST_v_h <- 0.034       # fraction of cases hospitalized but never in ICU
 
 # CONST_v_m + CONST_v_c + CONST_v_h must be 1
 
 CONST_f_c <- 1/2        # fraction of ICU hospitalization resulting in death 
 CONST_f_h <- 1/10       # fraction of non-ICU hospitalization resulting in death
 
-# Calibrating with Robert's help
-CONST_p <- 0.45         # fraction of non-hospitalized cases that isolate late
-# CONST_p <- 0.27         # fraction of non-hospitalized cases that isolate late
+CONST_p <- 0.27         # fraction of non-hospitalized cases that isolate late
 CONST_q <- 0.0694       # fraction of all cases that isolate early 
 
 
@@ -343,14 +315,6 @@ CONST_epsilon_serious_01 <- 0.5   # Assuming for every 100 cases of hospitalizat
 CONST_epsilon_serious_02 <- 0.75  # For every 100 cases of hospitalization, 25 cases are with 2 doses of vaccine vs. no vaccination 
 
 
-# Calibration mode:
-
-# From susceptible 
-E(disease_model, path = c("susceptible", "00_latent_infections_isolated") )$weight = "CALCULATE_FROM_CONTACT_MATRIX"
-E(disease_model, path = c("susceptible", "00_latent_infections_isolated") )$label = paste0("if infected, then q = ", CONST_q)
-
-E(disease_model, path = c("susceptible", "00_latent_infections_not_isolated") )$weight = "CALCULATE_FROM_CONTACT_MATRIX" 
-E(disease_model, path = c("susceptible", "00_latent_infections_not_isolated") )$label = paste0("if infected, then (1 - q) = ", (1 - CONST_q))
 
 
 # From Latent
@@ -417,179 +381,179 @@ E(disease_model, path = c("00_hospitalized_ICU", "00_dead") )$label <- paste0("(
 }
 
 # Infection parameters for people with 1st dose of vaccination
-# {
-#   # Infection states for 1 doses:
-#   disease_model <- disease_model+
-#     graph( edges = c("01_latent_infections_not_isolated", "01_pre_symptomatic_non_isolated", # π(1 → 3)
-#                      "01_latent_infections_isolated", "01_pre_symptomatic_isolated", # π(2 → 4)
-# 
-#                      "01_pre_symptomatic_non_isolated", "01_mild_non_isolated", # π(3 → 5)
-#                      "01_pre_symptomatic_non_isolated", "01_mild_isolated", # π(3 → 6)
-#                      "01_pre_symptomatic_non_isolated", "01_hospitalized", # π(3 → 7)
-#                      "01_pre_symptomatic_non_isolated", "01_hospitalized_ICU", # π(3 → 8)
-# 
-#                      "01_pre_symptomatic_isolated", "01_mild_isolated", # π(4 → 6)
-#                      "01_pre_symptomatic_isolated", "01_hospitalized", # π(4 → 7)
-#                      "01_pre_symptomatic_isolated", "01_hospitalized_ICU", # π(4 → 8)
-# 
-#                      "01_mild_isolated", "01_recovered", # π(5 → r)
-#                      "01_mild_non_isolated", "01_recovered", # π(6 → r)
-#                      "01_hospitalized", "01_recovered", # π(7 → r)
-#                      "01_hospitalized_ICU", "01_recovered", # π(8 → r)
-# 
-#                      "01_hospitalized", "01_dead", # π(7 → d)
-#                      "01_hospitalized_ICU", "01_dead"), # π(8 → d)
-#            directed = TRUE)
-# 
-#   # From Latent
-#   E(disease_model, path = c("01_latent_infections_not_isolated", "01_pre_symptomatic_non_isolated") )$weight <- CONST_CHI
-#   E(disease_model, path = c("01_latent_infections_not_isolated", "01_pre_symptomatic_non_isolated") )$label <- paste0("(1 → 3) = ", CONST_CHI)
-# 
-#   E(disease_model, path = c("01_latent_infections_isolated", "01_pre_symptomatic_isolated") )$weight <- CONST_CHI
-#   E(disease_model, path = c("01_latent_infections_isolated", "01_pre_symptomatic_isolated") )$label <- paste0("(2 → 4) = ", CONST_CHI)
-# 
-# 
-#   # From Pre-symptomatic
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_non_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_non_isolated") )$label  <- paste0("(3 → 5) = ", ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA)
-# 
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_isolated") )$label <- paste0("(3 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA)
-# 
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized") )$label <- paste0("(3 → 7) = ", CONST_v_h * (1 - CONST_epsilon_serious_01)  * CONST_KAPPA)
-# 
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized_ICU") )$label <- paste0("(3 → 8) = ", CONST_v_c  * (1 - CONST_epsilon_serious_01) * CONST_KAPPA)
-# 
-# 
-# 
-#   E(disease_model, path = c("01_pre_symptomatic_isolated", "01_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_isolated", "01_mild_isolated") )$label <- paste0("(4 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_KAPPA)
-# 
-#   E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized") )$label <- paste0("(4 → 7) = ", CONST_v_h  * (1 - CONST_epsilon_serious_01) * CONST_KAPPA)
-# 
-#   E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
-#   E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized_ICU") )$label <- paste0("(4 → 8) = ", CONST_v_c * (1 - CONST_epsilon_serious_01) * CONST_KAPPA)
-# 
-# 
-# 
-# 
-#   # From mild
-#   E(disease_model, path = c("01_mild_isolated", "01_recovered") )$weight <- CONST_ita
-#   E(disease_model, path = c("01_mild_isolated", "01_recovered") )$label <- paste0("(6 → r) = ", CONST_ita)
-# 
-#   E(disease_model, path = c("01_mild_non_isolated", "01_recovered") )$weight <- CONST_ita
-#   E(disease_model, path = c("01_mild_non_isolated", "01_recovered") )$label <- paste0("(5 → r) = ", CONST_ita)
-# 
-# 
-# 
-#   # From hospitalized
-#   E(disease_model, path = c("01_hospitalized", "01_recovered") )$weight <- CONST_rho * (1 - CONST_f_h)
-#   E(disease_model, path = c("01_hospitalized", "01_recovered") )$label <- paste0("(7 → r) = ", CONST_rho * (1 - CONST_f_h))
-# 
-#   E(disease_model, path = c("01_hospitalized", "01_dead") )$weight <- CONST_rho * CONST_f_h
-#   E(disease_model, path = c("01_hospitalized", "01_dead") )$label <- paste0("(7 → d) = ", CONST_rho * CONST_f_h)
-# 
-# 
-#   # From hospitalized with ICU usage
-#   E(disease_model, path = c("01_hospitalized_ICU", "01_recovered") )$weight <- CONST_sigma * (1 - CONST_f_c)
-#   E(disease_model, path = c("01_hospitalized_ICU", "01_recovered") )$label <- paste0("(8 → r) = ", CONST_sigma * (1 - CONST_f_c))
-# 
-#   E(disease_model, path = c("01_hospitalized_ICU", "01_dead") )$weight <- CONST_sigma * CONST_f_c
-#   E(disease_model, path = c("01_hospitalized_ICU", "01_dead") )$label <- paste0("(8 → d) = ", CONST_sigma * CONST_f_c)
-# 
-# }
+{
+  # Infection states for 1 doses: 
+  disease_model <- disease_model+  
+    graph( edges = c("01_latent_infections_not_isolated", "01_pre_symptomatic_non_isolated", # π(1 → 3)
+                     "01_latent_infections_isolated", "01_pre_symptomatic_isolated", # π(2 → 4)
+                     
+                     "01_pre_symptomatic_non_isolated", "01_mild_non_isolated", # π(3 → 5)
+                     "01_pre_symptomatic_non_isolated", "01_mild_isolated", # π(3 → 6)
+                     "01_pre_symptomatic_non_isolated", "01_hospitalized", # π(3 → 7)
+                     "01_pre_symptomatic_non_isolated", "01_hospitalized_ICU", # π(3 → 8)
+                     
+                     "01_pre_symptomatic_isolated", "01_mild_isolated", # π(4 → 6)
+                     "01_pre_symptomatic_isolated", "01_hospitalized", # π(4 → 7)
+                     "01_pre_symptomatic_isolated", "01_hospitalized_ICU", # π(4 → 8)
+                     
+                     "01_mild_isolated", "01_recovered", # π(5 → r)
+                     "01_mild_non_isolated", "01_recovered", # π(6 → r)
+                     "01_hospitalized", "01_recovered", # π(7 → r)
+                     "01_hospitalized_ICU", "01_recovered", # π(8 → r)
+                     
+                     "01_hospitalized", "01_dead", # π(7 → d)
+                     "01_hospitalized_ICU", "01_dead"), # π(8 → d)
+           directed = TRUE)
+  
+  # From Latent
+  E(disease_model, path = c("01_latent_infections_not_isolated", "01_pre_symptomatic_non_isolated") )$weight <- CONST_CHI
+  E(disease_model, path = c("01_latent_infections_not_isolated", "01_pre_symptomatic_non_isolated") )$label <- paste0("(1 → 3) = ", CONST_CHI)
+  
+  E(disease_model, path = c("01_latent_infections_isolated", "01_pre_symptomatic_isolated") )$weight <- CONST_CHI
+  E(disease_model, path = c("01_latent_infections_isolated", "01_pre_symptomatic_isolated") )$label <- paste0("(2 → 4) = ", CONST_CHI)
+  
+  
+  # From Pre-symptomatic
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_non_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_non_isolated") )$label  <- paste0("(3 → 5) = ", ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA)
+  
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_mild_isolated") )$label <- paste0("(3 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA)
+  
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized") )$label <- paste0("(3 → 7) = ", CONST_v_h * (1 - CONST_epsilon_serious_01)  * CONST_KAPPA)
+  
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_non_isolated", "01_hospitalized_ICU") )$label <- paste0("(3 → 8) = ", CONST_v_c  * (1 - CONST_epsilon_serious_01) * CONST_KAPPA)
+  
+  
+  
+  E(disease_model, path = c("01_pre_symptomatic_isolated", "01_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_isolated", "01_mild_isolated") )$label <- paste0("(4 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_01 * (1 - CONST_v_m)  ) * CONST_KAPPA)
+  
+  E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized") )$label <- paste0("(4 → 7) = ", CONST_v_h  * (1 - CONST_epsilon_serious_01) * CONST_KAPPA)
+  
+  E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_01) * CONST_KAPPA
+  E(disease_model, path = c("01_pre_symptomatic_isolated", "01_hospitalized_ICU") )$label <- paste0("(4 → 8) = ", CONST_v_c * (1 - CONST_epsilon_serious_01) * CONST_KAPPA)
+  
+  
+  
+  
+  # From mild
+  E(disease_model, path = c("01_mild_isolated", "01_recovered") )$weight <- CONST_ita
+  E(disease_model, path = c("01_mild_isolated", "01_recovered") )$label <- paste0("(6 → r) = ", CONST_ita)
+  
+  E(disease_model, path = c("01_mild_non_isolated", "01_recovered") )$weight <- CONST_ita
+  E(disease_model, path = c("01_mild_non_isolated", "01_recovered") )$label <- paste0("(5 → r) = ", CONST_ita)
+  
+  
+  
+  # From hospitalized 
+  E(disease_model, path = c("01_hospitalized", "01_recovered") )$weight <- CONST_rho * (1 - CONST_f_h)
+  E(disease_model, path = c("01_hospitalized", "01_recovered") )$label <- paste0("(7 → r) = ", CONST_rho * (1 - CONST_f_h))
+  
+  E(disease_model, path = c("01_hospitalized", "01_dead") )$weight <- CONST_rho * CONST_f_h
+  E(disease_model, path = c("01_hospitalized", "01_dead") )$label <- paste0("(7 → d) = ", CONST_rho * CONST_f_h)
+  
+  
+  # From hospitalized with ICU usage
+  E(disease_model, path = c("01_hospitalized_ICU", "01_recovered") )$weight <- CONST_sigma * (1 - CONST_f_c)
+  E(disease_model, path = c("01_hospitalized_ICU", "01_recovered") )$label <- paste0("(8 → r) = ", CONST_sigma * (1 - CONST_f_c))
+  
+  E(disease_model, path = c("01_hospitalized_ICU", "01_dead") )$weight <- CONST_sigma * CONST_f_c
+  E(disease_model, path = c("01_hospitalized_ICU", "01_dead") )$label <- paste0("(8 → d) = ", CONST_sigma * CONST_f_c)
+  
+}
 
 
 
 # Infection parameters for people with 2nd dose of vaccination
 
-# {
-#   # Infection states for 2 doses: 
-#   disease_model <- disease_model+  
-#     graph( edges = c("02_latent_infections_not_isolated", "02_pre_symptomatic_non_isolated", # π(1 → 3)
-#                      "02_latent_infections_isolated", "02_pre_symptomatic_isolated", # π(2 → 4)
-#                      
-#                      "02_pre_symptomatic_non_isolated", "02_mild_non_isolated", # π(3 → 5)
-#                      "02_pre_symptomatic_non_isolated", "02_mild_isolated", # π(3 → 6)
-#                      "02_pre_symptomatic_non_isolated", "02_hospitalized", # π(3 → 7)
-#                      "02_pre_symptomatic_non_isolated", "02_hospitalized_ICU", # π(3 → 8)
-#                      
-#                      "02_pre_symptomatic_isolated", "02_mild_isolated", # π(4 → 6)
-#                      "02_pre_symptomatic_isolated", "02_hospitalized", # π(4 → 7)
-#                      "02_pre_symptomatic_isolated", "02_hospitalized_ICU", # π(4 → 8)
-#                      
-#                      "02_mild_isolated", "02_recovered", # π(5 → r)
-#                      "02_mild_non_isolated", "02_recovered", # π(6 → r)
-#                      "02_hospitalized", "02_recovered", # π(7 → r)
-#                      "02_hospitalized_ICU", "02_recovered", # π(8 → r)
-#                      
-#                      "02_hospitalized", "02_dead", # π(7 → d)
-#                      "02_hospitalized_ICU", "02_dead"), # π(8 → d)
-#            directed = TRUE)
-#   
-#   # From Latent
-#   E(disease_model, path = c("02_latent_infections_not_isolated", "02_pre_symptomatic_non_isolated") )$weight <- CONST_CHI
-#   E(disease_model, path = c("02_latent_infections_not_isolated", "02_pre_symptomatic_non_isolated") )$label <- paste0("(1 → 3) = ", CONST_CHI)
-#   
-#   E(disease_model, path = c("02_latent_infections_isolated", "02_pre_symptomatic_isolated") )$weight <- CONST_CHI
-#   E(disease_model, path = c("02_latent_infections_isolated", "02_pre_symptomatic_isolated") )$label <- paste0("(2 → 4) = ", CONST_CHI)
-#   
-#   
-#   # From Pre-symptomatic
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_non_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_non_isolated") )$label  <- paste0("(3 → 5) = ", ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA)
-#   
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_isolated") )$label <- paste0("(3 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA)
-#   
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized") )$label <- paste0("(3 → 7) = ", CONST_v_h * (1 - CONST_epsilon_serious_02)  * CONST_KAPPA)
-#   
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized_ICU") )$label <- paste0("(3 → 8) = ", CONST_v_c  * (1 - CONST_epsilon_serious_02) * CONST_KAPPA)
-#   
-#   
-#   
-#   E(disease_model, path = c("02_pre_symptomatic_isolated", "02_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_isolated", "02_mild_isolated") )$label <- paste0("(4 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_KAPPA)
-#   
-#   E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized") )$label <- paste0("(4 → 7) = ", CONST_v_h  * (1 - CONST_epsilon_serious_02) * CONST_KAPPA)
-#   
-#   E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
-#   E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized_ICU") )$label <- paste0("(4 → 8) = ", CONST_v_c * (1 - CONST_epsilon_serious_02) * CONST_KAPPA)
-#   
-#   
-#   
-#   
-#   # From mild
-#   E(disease_model, path = c("02_mild_isolated", "02_recovered") )$weight <- CONST_ita
-#   E(disease_model, path = c("02_mild_isolated", "02_recovered") )$label <- paste0("(6 → r) = ", CONST_ita)
-#   
-#   E(disease_model, path = c("02_mild_non_isolated", "02_recovered") )$weight <- CONST_ita
-#   E(disease_model, path = c("02_mild_non_isolated", "02_recovered") )$label <- paste0("(5 → r) = ", CONST_ita)
-#   
-#   
-#   
-#   # From hospitalized 
-#   E(disease_model, path = c("02_hospitalized", "02_recovered") )$weight <- CONST_rho * (1 - CONST_f_h)
-#   E(disease_model, path = c("02_hospitalized", "02_recovered") )$label <- paste0("(7 → r) = ", CONST_rho * (1 - CONST_f_h))
-#   
-#   E(disease_model, path = c("02_hospitalized", "02_dead") )$weight <- CONST_rho * CONST_f_h
-#   E(disease_model, path = c("02_hospitalized", "02_dead") )$label <- paste0("(7 → d) = ", CONST_rho * CONST_f_h)
-#   
-#   
-#   # From hospitalized with ICU usage
-#   E(disease_model, path = c("02_hospitalized_ICU", "02_recovered") )$weight <- CONST_sigma * (1 - CONST_f_c)
-#   E(disease_model, path = c("02_hospitalized_ICU", "02_recovered") )$label <- paste0("(8 → r) = ", CONST_sigma * (1 - CONST_f_c))
-#   
-#   E(disease_model, path = c("02_hospitalized_ICU", "02_dead") )$weight <- CONST_sigma * CONST_f_c
-#   E(disease_model, path = c("02_hospitalized_ICU", "02_dead") )$label <- paste0("(8 → d) = ", CONST_sigma * CONST_f_c)
-#   
-# }
+{
+  # Infection states for 2 doses: 
+  disease_model <- disease_model+  
+    graph( edges = c("02_latent_infections_not_isolated", "02_pre_symptomatic_non_isolated", # π(1 → 3)
+                     "02_latent_infections_isolated", "02_pre_symptomatic_isolated", # π(2 → 4)
+                     
+                     "02_pre_symptomatic_non_isolated", "02_mild_non_isolated", # π(3 → 5)
+                     "02_pre_symptomatic_non_isolated", "02_mild_isolated", # π(3 → 6)
+                     "02_pre_symptomatic_non_isolated", "02_hospitalized", # π(3 → 7)
+                     "02_pre_symptomatic_non_isolated", "02_hospitalized_ICU", # π(3 → 8)
+                     
+                     "02_pre_symptomatic_isolated", "02_mild_isolated", # π(4 → 6)
+                     "02_pre_symptomatic_isolated", "02_hospitalized", # π(4 → 7)
+                     "02_pre_symptomatic_isolated", "02_hospitalized_ICU", # π(4 → 8)
+                     
+                     "02_mild_isolated", "02_recovered", # π(5 → r)
+                     "02_mild_non_isolated", "02_recovered", # π(6 → r)
+                     "02_hospitalized", "02_recovered", # π(7 → r)
+                     "02_hospitalized_ICU", "02_recovered", # π(8 → r)
+                     
+                     "02_hospitalized", "02_dead", # π(7 → d)
+                     "02_hospitalized_ICU", "02_dead"), # π(8 → d)
+           directed = TRUE)
+  
+  # From Latent
+  E(disease_model, path = c("02_latent_infections_not_isolated", "02_pre_symptomatic_non_isolated") )$weight <- CONST_CHI
+  E(disease_model, path = c("02_latent_infections_not_isolated", "02_pre_symptomatic_non_isolated") )$label <- paste0("(1 → 3) = ", CONST_CHI)
+  
+  E(disease_model, path = c("02_latent_infections_isolated", "02_pre_symptomatic_isolated") )$weight <- CONST_CHI
+  E(disease_model, path = c("02_latent_infections_isolated", "02_pre_symptomatic_isolated") )$label <- paste0("(2 → 4) = ", CONST_CHI)
+  
+  
+  # From Pre-symptomatic
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_non_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_non_isolated") )$label  <- paste0("(3 → 5) = ", ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  )* (1 - CONST_p) * CONST_KAPPA)
+  
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_mild_isolated") )$label <- paste0("(3 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_p * CONST_KAPPA)
+  
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized") )$label <- paste0("(3 → 7) = ", CONST_v_h * (1 - CONST_epsilon_serious_02)  * CONST_KAPPA)
+  
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_non_isolated", "02_hospitalized_ICU") )$label <- paste0("(3 → 8) = ", CONST_v_c  * (1 - CONST_epsilon_serious_02) * CONST_KAPPA)
+  
+  
+  
+  E(disease_model, path = c("02_pre_symptomatic_isolated", "02_mild_isolated") )$weight <- ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_isolated", "02_mild_isolated") )$label <- paste0("(4 → 6) = ", ( CONST_v_m + CONST_epsilon_serious_02 * (1 - CONST_v_m)  ) * CONST_KAPPA)
+  
+  E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized") )$weight <- CONST_v_h * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized") )$label <- paste0("(4 → 7) = ", CONST_v_h  * (1 - CONST_epsilon_serious_02) * CONST_KAPPA)
+  
+  E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized_ICU") )$weight <- CONST_v_c * (1 - CONST_epsilon_serious_02) * CONST_KAPPA
+  E(disease_model, path = c("02_pre_symptomatic_isolated", "02_hospitalized_ICU") )$label <- paste0("(4 → 8) = ", CONST_v_c * (1 - CONST_epsilon_serious_02) * CONST_KAPPA)
+  
+  
+  
+  
+  # From mild
+  E(disease_model, path = c("02_mild_isolated", "02_recovered") )$weight <- CONST_ita
+  E(disease_model, path = c("02_mild_isolated", "02_recovered") )$label <- paste0("(6 → r) = ", CONST_ita)
+  
+  E(disease_model, path = c("02_mild_non_isolated", "02_recovered") )$weight <- CONST_ita
+  E(disease_model, path = c("02_mild_non_isolated", "02_recovered") )$label <- paste0("(5 → r) = ", CONST_ita)
+  
+  
+  
+  # From hospitalized 
+  E(disease_model, path = c("02_hospitalized", "02_recovered") )$weight <- CONST_rho * (1 - CONST_f_h)
+  E(disease_model, path = c("02_hospitalized", "02_recovered") )$label <- paste0("(7 → r) = ", CONST_rho * (1 - CONST_f_h))
+  
+  E(disease_model, path = c("02_hospitalized", "02_dead") )$weight <- CONST_rho * CONST_f_h
+  E(disease_model, path = c("02_hospitalized", "02_dead") )$label <- paste0("(7 → d) = ", CONST_rho * CONST_f_h)
+  
+  
+  # From hospitalized with ICU usage
+  E(disease_model, path = c("02_hospitalized_ICU", "02_recovered") )$weight <- CONST_sigma * (1 - CONST_f_c)
+  E(disease_model, path = c("02_hospitalized_ICU", "02_recovered") )$label <- paste0("(8 → r) = ", CONST_sigma * (1 - CONST_f_c))
+  
+  E(disease_model, path = c("02_hospitalized_ICU", "02_dead") )$weight <- CONST_sigma * CONST_f_c
+  E(disease_model, path = c("02_hospitalized_ICU", "02_dead") )$label <- paste0("(8 → d) = ", CONST_sigma * CONST_f_c)
+  
+}
 
 
 
@@ -597,32 +561,32 @@ E(disease_model, path = c("00_hospitalized_ICU", "00_dead") )$label <- paste0("(
 
 
 # Attach susceptible with latent_infections (Latent) type states (transition implemented via special weight value) @"### INELEGANT SOLUTION ###" 
-# disease_model <- disease_model + edge("susceptible", "00_latent_infections_isolated", 
-#                                       weight = "CALCULATE_FROM_CONTACT_MATRIX", 
-#                                       label = paste0("if infected, then q = ", CONST_q))
-# 
-# disease_model <- disease_model + edge("susceptible", "00_latent_infections_not_isolated", 
-#                                        weight = "CALCULATE_FROM_CONTACT_MATRIX", 
-#                                        label = paste0("if infected, then (1 - q) = ", (1 - CONST_q)))
+disease_model <- disease_model + edge("susceptible", "00_latent_infections_isolated", 
+                                      weight = "CALCULATE_FROM_CONTACT_MATRIX", 
+                                      label = paste0("if infected, then q = ", CONST_q))
+
+disease_model <- disease_model + edge("susceptible", "00_latent_infections_not_isolated", 
+                                       weight = "CALCULATE_FROM_CONTACT_MATRIX", 
+                                       label = paste0("if infected, then (1 - q) = ", (1 - CONST_q)))
 
 
 
-# disease_model <- disease_model + edge("received_dose1", "01_latent_infections_isolated", 
-#                                       weight = "CALCULATE_FROM_CONTACT_MATRIX", 
-#                                       label = paste0("if infected, then q = ", CONST_q))
-# 
-# disease_model <- disease_model + edge("received_dose1", "01_latent_infections_not_isolated", 
-#                                       weight = "CALCULATE_FROM_CONTACT_MATRIX", 
-#                                       label = paste0("if infected, then (1 - q) = ", (1 - CONST_q)))
-# 
-# 
-# disease_model <- disease_model + edge("received_dose2", "02_latent_infections_isolated", 
-#                                       weight = "CALCULATE_FROM_CONTACT_MATRIX", 
-#                                       label = paste0("if infected, then q = ", CONST_q))
-# 
-# disease_model <- disease_model + edge("received_dose2", "02_latent_infections_not_isolated", 
-#                                       weight = "CALCULATE_FROM_CONTACT_MATRIX", 
-#                                       label = paste0("if infected, then (1 - q) = ", (1 - CONST_q)))
+disease_model <- disease_model + edge("received_dose1", "01_latent_infections_isolated", 
+                                      weight = "CALCULATE_FROM_CONTACT_MATRIX", 
+                                      label = paste0("if infected, then q = ", CONST_q))
+
+disease_model <- disease_model + edge("received_dose1", "01_latent_infections_not_isolated", 
+                                      weight = "CALCULATE_FROM_CONTACT_MATRIX", 
+                                      label = paste0("if infected, then (1 - q) = ", (1 - CONST_q)))
+
+
+disease_model <- disease_model + edge("received_dose2", "02_latent_infections_isolated", 
+                                      weight = "CALCULATE_FROM_CONTACT_MATRIX", 
+                                      label = paste0("if infected, then q = ", CONST_q))
+
+disease_model <- disease_model + edge("received_dose2", "02_latent_infections_not_isolated", 
+                                      weight = "CALCULATE_FROM_CONTACT_MATRIX", 
+                                      label = paste0("if infected, then (1 - q) = ", (1 - CONST_q)))
 
 
 
@@ -643,8 +607,8 @@ transition_matrix <- as_adjacency_matrix(disease_model, attr="weight", sparse = 
 # generate list with indices 
 # transition_list <- which(transition_matrix != "", arr.ind = TRUE, useNames = FALSE)
 
-
 # Infection probability function: MAX_CHANCE * tanh( <contact_time> / TIME_TILL_76p_CHANCE )
+
 
 
 CONST_TIME_TILL_76p_CHANCE <- 1200 # seconds (20 minutes)
@@ -779,15 +743,61 @@ contact_matrix <- nextElem(contact_matrix_iterator)
 
 
 
+# Pre-loading contact matrices without school contacts 
+#
+# Simulation assumption: 
+# 
+# given a threshold of known "active cases" on a given day simulation switches to contact matrices without school contacts
+# to estimate effectiveness of non-pharmacological interventions like school closures and so on 
+
+# TODO: Constraint leisure and generic shopping as a function of no. of active hospitalisation
+
+# list_of_contact_matrix_sans_school <- list()
+# matrix_index <- 1
+# 
+# for(CONTACT_MATRIX_SANS_SCHOOL_AS_PAIRLIST_FILENAME in LIST_OF_CONTACT_MATRIX_SANS_SCHOOL_FILEPATH){
+#   # Debug: 
+#   # cat(CONTACT_MATRIX_SANS_SCHOOL_AS_PAIRLIST_FILENAME, "\n")
+#   
+#   # Read contact matrix 
+#   contact_matrix_sans_school_as_pairlist <- read.table(CONTACT_MATRIX_SANS_SCHOOL_AS_PAIRLIST_FILENAME, sep=",")
+#   
+#   # Adding readable column names 
+#   colnames(contact_matrix_sans_school_as_pairlist) <- c("person_id_1", "person_id_2", "contact_in_seconds")
+#   
+#   COUNT_MAX_PERSON_ID <- max( max(contact_matrix_sans_school_as_pairlist$person_id_1), max(contact_matrix_sans_school_as_pairlist$person_id_2))
+#   
+#   # Converting to sparse matrices
+#   sparse_contact_matrix_sans_school <- sparseMatrix(i = contact_matrix_sans_school_as_pairlist$person_id_1, 
+#                                         j = contact_matrix_sans_school_as_pairlist$person_id_2, 
+#                                         x = contact_matrix_sans_school_as_pairlist$contact_in_seconds)
+#   
+#   # convert to array
+#   contact_matrix_sans_school <- array( data = sparse_contact_matrix_sans_school, 
+#                            dim = c(COUNT_MAX_PERSON_ID, COUNT_MAX_PERSON_ID))
+#   
+#   
+#   
+#   list_of_contact_matrix_sans_school[[matrix_index]] <- contact_matrix_sans_school
+#   
+#   matrix_index <- matrix_index + 1
+# }
+# 
+# COUNT_CONTACT_MATRIX_SANS_SCHOOL <- length(list_of_contact_matrix_sans_school)
+# 
+# 
+# # Create iterator that works till end of list
+# contact_matrix_sans_school_iterator <- iter(list_of_contact_matrix_sans_school)
+# 
+# # Get first contact matrix
+# contact_matrix_sans_school <- nextElem(contact_matrix_sans_school_iterator)
+
+
+
+
 # Initialize state 
 TOTAL_STATES <- length(colnames(transition_matrix))
 
-# Calibration mode: 
-# TOTAL_SIMULATION_DAYS <- 1
-
-# TOTAL_SIMULATION_DAYS <- 30
-# TOTAL_SIMULATION_DAYS <- 60
-# TOTAL_SIMULATION_DAYS <- 365
 
 TOTAL_SIMULATED_PERSONS <- max(contact_matrix_as_pairlist[1:2])
 
@@ -807,68 +817,82 @@ STATE[ , 1] <- which( colnames(transition_matrix) == "susceptible" )
 
 STATE_NAMES = colnames(transition_matrix)
 
-# Book keeping
+# Mapping to SEIR 
+STATELIST_SUSCEPTIBLE <- which(colnames(transition_matrix) == "susceptible" | 
+                                 colnames(transition_matrix) == "received_dose1" |
+                                 colnames(transition_matrix) == "received_dose2")
 
-# Calibration mode: 
-STATELIST_SUSCEPTIBLE <- which(colnames(transition_matrix) == "susceptible")
+STATELIST_LATENT <- which(colnames(transition_matrix) == "00_latent_infections_isolated" | 
+                             colnames(transition_matrix) == "00_latent_infections_not_isolated" | 
+                             colnames(transition_matrix) == "01_latent_infections_isolated" | 
+                             colnames(transition_matrix) == "01_latent_infections_not_isolated" | 
+                            colnames(transition_matrix) == "02_latent_infections_isolated" | 
+                            colnames(transition_matrix) == "02_latent_infections_not_isolated")
 
 STATELIST_INFECTIOUS <- which(colnames(transition_matrix) == "00_pre_symptomatic_non_isolated" | 
-                              colnames(transition_matrix) == "00_mild_non_isolated")
+                                colnames(transition_matrix) == "00_mild_non_isolated" | 
+                                colnames(transition_matrix) == "01_pre_symptomatic_non_isolated" | 
+                                colnames(transition_matrix) == "01_mild_non_isolated" | 
+                                colnames(transition_matrix) == "02_pre_symptomatic_non_isolated" | 
+                                colnames(transition_matrix) == "02_mild_non_isolated"
+                              )
 
-STATELIST_NEW_CASES <- which(colnames(transition_matrix) == "00_pre_symptomatic_isolated" | 
-                               colnames(transition_matrix) == "00_mild_isolated")
+# TODO
+STATELIST_REMOVED <- which(  colnames(transition_matrix) == "00_recovered" | 
+                             colnames(transition_matrix) == "01_recovered" | 
+                             colnames(transition_matrix) == "02_recovered" | 
+                               
+                             colnames(transition_matrix) == "00_dead" | 
+                             colnames(transition_matrix) == "01_dead" |
+                             colnames(transition_matrix) == "02_dead" )
 
-STATELIST_ACTIVE_CASES <- which(colnames(transition_matrix) == "00_pre_symptomatic_isolated" | 
+STATELIST_NEW_CASES <- which(colnames(transition_matrix) == "00_latent_infections_isolated" | 
+                             colnames(transition_matrix) == "01_latent_infections_isolated" | 
+                             colnames(transition_matrix) == "02_latent_infections_isolated" | 
+                               
+                             colnames(transition_matrix) == "00_mild_isolated" | 
+                             colnames(transition_matrix) == "01_mild_isolated" | 
+                             colnames(transition_matrix) == "02_mild_isolated" )
+
+STATELIST_ACTIVE_CASES <- which(
+                                  # colnames(transition_matrix) == "00_latent_infections_isolated" | 
+                                  # colnames(transition_matrix) == "01_latent_infections_isolated" | 
+                                  # colnames(transition_matrix) == "02_latent_infections_isolated" | 
+                                  
+                                  colnames(transition_matrix) == "00_pre_symptomatic_isolated" | 
+                                  colnames(transition_matrix) == "01_pre_symptomatic_isolated" | 
+                                  colnames(transition_matrix) == "02_pre_symptomatic_isolated" | 
+                                  
                                   colnames(transition_matrix) == "00_mild_isolated" | 
+                                  colnames(transition_matrix) == "01_mild_isolated" | 
+                                  colnames(transition_matrix) == "02_mild_isolated" | 
+                                  
                                   colnames(transition_matrix) == "00_hospitalized" | 
-                                  colnames(transition_matrix) == "00_hospitalized_ICU") 
+                                  colnames(transition_matrix) == "01_hospitalized" | 
+                                  colnames(transition_matrix) == "02_hospitalized" | 
+                                  
+                                  colnames(transition_matrix) == "00_hospitalized_ICU" | 
+                                  colnames(transition_matrix) == "01_hospitalized_ICU" | 
+                                  colnames(transition_matrix) == "02_hospitalized_ICU" )
 
-
-# STATELIST_SUSCEPTIBLE <- which(colnames(transition_matrix) == "susceptible" | 
-#                                  colnames(transition_matrix) == "received_dose1" |
-#                                  colnames(transition_matrix) == "received_dose2")
-# 
-# STATELIST_LATENT <- which(colnames(transition_matrix) == "00_latent_infections_isolated" | 
-#                              colnames(transition_matrix) == "00_latent_infections_not_isolated" | 
-#                              colnames(transition_matrix) == "01_latent_infections_isolated" | 
-#                              colnames(transition_matrix) == "01_latent_infections_not_isolated" | 
-#                             colnames(transition_matrix) == "02_latent_infections_isolated" | 
-#                             colnames(transition_matrix) == "02_latent_infections_not_isolated")
-# 
-# STATELIST_INFECTIOUS <- which(colnames(transition_matrix) == "00_pre_symptomatic_non_isolated" | 
-#                                 colnames(transition_matrix) == "00_mild_non_isolated" | 
-#                                 colnames(transition_matrix) == "01_pre_symptomatic_non_isolated" | 
-#                                 colnames(transition_matrix) == "01_mild_non_isolated" | 
-#                                 colnames(transition_matrix) == "02_pre_symptomatic_non_isolated" | 
-#                                 colnames(transition_matrix) == "02_mild_non_isolated"
-#                               )
-# 
-# # TODO
-# STATELIST_REMOVED <- which(  colnames(transition_matrix) == "00_recovered" | 
-#                              colnames(transition_matrix) == "01_recovered" | 
-#                              colnames(transition_matrix) == "02_recovered" | 
-#                              colnames(transition_matrix) == "00_dead" | 
-#                              colnames(transition_matrix) == "01_dead" |
-#                              colnames(transition_matrix) == "02_dead" )
-# 
-# STATELIST_NEW_CASES <- which(colnames(transition_matrix) == "00_latent_infections_isolated" | 
-#                              colnames(transition_matrix) == "01_latent_infections_isolated" | 
-#                              colnames(transition_matrix) == "02_latent_infections_isolated" | 
-#                              colnames(transition_matrix) == "00_mild_isolated" | 
-#                              colnames(transition_matrix) == "01_mild_isolated" | 
-#                              colnames(transition_matrix) == "02_mild_isolated" )
+STATELIST_HOSPITALISED_CASES <- which(colnames(transition_matrix) == "00_hospitalized" | 
+                                        colnames(transition_matrix) == "01_hospitalized" | 
+                                        colnames(transition_matrix) == "02_hospitalized" | 
+                                        
+                                        colnames(transition_matrix) == "00_hospitalized_ICU" | 
+                                        colnames(transition_matrix) == "01_hospitalized_ICU" | 
+                                        colnames(transition_matrix) == "02_hospitalized_ICU" )
 
 
 
 # COUNT_FIRST_DAY_DISEASE_IMPORT <- 5 # Default parameter
 # COUNT_FIRST_DAY_DISEASE_IMPORT <- 1000 # Checking relative proportions (works)
 # COUNT_FIRST_DAY_DISEASE_IMPORT <- 100 # Checking for relative infectivity 
-
-# Calibration mode: 
 COUNT_FIRST_DAY_DISEASE_IMPORT <- 1 # To try and mimic Campbellton
 
 DAILY_NEW_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
 DAILY_ACTIVE_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
+DAILY_HOSPITALISED_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
 
 # Set first day new cases to COUNT_FIRST_DAY_DISEASE_IMPORT for bookkeeping
 DAILY_NEW_CASES[1] <- COUNT_FIRST_DAY_DISEASE_IMPORT
@@ -992,11 +1016,6 @@ if(sum(vaccination_data_table_list[[1]] == vaccination_data_table_list[[3]]) == 
 # Simulate from day 2 to TOTAL_SIMULATION_DAYS
 for(day_index in 2:TOTAL_SIMULATION_DAYS){
   
-  # Debug: 
-  # cat("\n")
-  # cat("  Sim day: ", day_index, sep = "")
-  # cat("\n")
-  
   # Slice yesterday's data
   previous_day_df <- data.frame(STATE[ , day_index - 1])
   colnames(previous_day_df) <- c("state_id")
@@ -1007,9 +1026,9 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
   
   # previous_day_latent_df <- filter(previous_day_df, state_id %in% STATELIST_LATENT)
   
-  previous_day_susceptible_df <- filter(previous_day_df, state_id %in% which( colnames(transition_matrix) == "susceptible" ))
+  # previous_day_susceptible_df <- filter(previous_day_df, state_id %in% which( colnames(transition_matrix) == "susceptible" ))
   
-  previous_day_dose1_df <- filter(previous_day_df, state_id %in% which( colnames(transition_matrix) == "received_dose1" ))
+  # previous_day_dose1_df <- filter(previous_day_df, state_id %in% which( colnames(transition_matrix) == "received_dose1" ))
   
   
   # colnames(previous_day_df) <- c("person_id_1", "state id")
@@ -1021,75 +1040,68 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
     # Get state of this person from previous day
     PREV_STATE_INDEX <- STATE[person_id, day_index - 1]
     PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
-    
-    # for no transitions
-    next_state_id <- PREV_STATE_INDEX
-    next_state_name <- PREV_STATE_NAME
-    
-    # Debug: 
-    # cat("    \n...............\n")
-    # cat("    Previous state of Person no: ", person_id, ", state id: ", PREV_STATE_INDEX, ", state name: ", PREV_STATE_NAME, "\n", sep = "")
+    # cat("Person no: ", person_id, ", state id: ", PREV_STATE_INDEX, ", state name: ", PREV_STATE_NAME, "\n")
     
     
     
     # Check if the person may have been vaccinated last simulation day
     # i.e. is in succeptible or received_dose_1 state
     # NO_OF_VACCINATION_DATA_BASED_TRANSITION <- length(which(POSSIBLE_TRANSITIONS$transition_weights == "CALCULATE_FROM_VACCINATION_DATA"))
-    # if(PREV_STATE_NAME == "susceptible" || PREV_STATE_NAME == "received_dose1"){
-    #   
-    #   # Get vaccination data and roll dice for possible vaccination last day
-    #   vaccination_day_index <- day_index - 1
-    #   
-    #   # Re-use last availble vaccination rates 
-    #   if(vaccination_day_index > nrow(vaccination_perday_mat)) {
-    #     vaccination_day_index <- nrow(vaccination_perday_mat)
-    #   }
-    #   
-    #   if(PREV_STATE_NAME == "susceptible" && 
-    #      vaccination_perday_mat[vaccination_day_index , "dose1"] > 0){
-    #     
-    #     dose1_prob <- vaccination_perday_mat[vaccination_day_index , "dose1"] / CONST_NB_POP
-    #     
-    #     # Force negative fractions to 0, to counteract artifacts in the data
-    #     if(dose1_prob < 0) { dose1_prob = 0 }
-    #     
-    #     if( runif(1) <= dose1_prob){
-    #       prev_state_id <- which( colnames(transition_matrix) == "received_dose1" )
-    #       
-    #       # Set state 
-    #       STATE[person_id, day_index - 1] <- prev_state_id
-    #       
-    #       # Book keeping 
-    #       infection_hist_mat[person_id, "dose 1 on"] <- day_index - 1
-    #     }
-    #   }
-    #   
-    #   if(PREV_STATE_NAME == "received_dose1" && 
-    #      vaccination_perday_mat[vaccination_day_index , "dose2"] > 0 &&
-    #      (day_index - strtoi(infection_hist_mat[[person_id, "dose 1 on"]])) >= CONST_MIN_DAYS_TILL_SECOND_DOSE){
-    #     
-    #     dose2_prob <- vaccination_perday_mat[vaccination_day_index , "dose2"] / CONST_NB_POP
-    #     
-    #     # Force negative fractions to 0, to counteract artifacts in the data 
-    #     if(dose2_prob < 0) { dose2_prob = 0 }
-    #     
-    #     if( runif(1) <= dose2_prob){
-    #       prev_state_id <- which( colnames(transition_matrix) == "received_dose2" )
-    #       
-    #       # Set state 
-    #       STATE[person_id, day_index - 1] <- prev_state_id
-    #       
-    #       # Book keeping 
-    #       infection_hist_mat[person_id, "dose 2 on"] <- day_index - 1
-    #     }
-    #   }
-    #   
-    #   
-    #   # Reload states
-    #   PREV_STATE_INDEX <- STATE[person_id, day_index - 1]
-    #   PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
-    #   
-    # } # End of last days vaccination prob
+    if(PREV_STATE_NAME == "susceptible" || PREV_STATE_NAME == "received_dose1"){
+      
+      # Get vaccination data and roll dice for possible vaccination last day
+      vaccination_day_index <- day_index - 1
+      
+      # Re-use last availble vaccination rates 
+      if(vaccination_day_index > nrow(vaccination_perday_mat)) {
+        vaccination_day_index <- nrow(vaccination_perday_mat)
+      }
+      
+      if(PREV_STATE_NAME == "susceptible" && 
+         vaccination_perday_mat[vaccination_day_index , "dose1"] > 0){
+        
+        dose1_prob <- vaccination_perday_mat[vaccination_day_index , "dose1"] / CONST_NB_POP
+        
+        # Force negative fractions to 0, to counteract artifacts in the data
+        if(dose1_prob < 0) { dose1_prob = 0 }
+        
+        if( runif(1) <= dose1_prob){
+          prev_state_id <- which( colnames(transition_matrix) == "received_dose1" )
+          
+          # Set state 
+          STATE[person_id, day_index - 1] <- prev_state_id
+          
+          # Book keeping 
+          infection_hist_mat[person_id, "dose 1 on"] <- day_index - 1
+        }
+      }
+      
+      if(PREV_STATE_NAME == "received_dose1" && 
+         vaccination_perday_mat[vaccination_day_index , "dose2"] > 0 &&
+         (day_index - strtoi(infection_hist_mat[[person_id, "dose 1 on"]])) >= CONST_MIN_DAYS_TILL_SECOND_DOSE){
+        
+        dose2_prob <- vaccination_perday_mat[vaccination_day_index , "dose2"] / CONST_NB_POP
+        
+        # Force negative fractions to 0, to counteract artifacts in the data 
+        if(dose2_prob < 0) { dose2_prob = 0 }
+        
+        if( runif(1) <= dose2_prob){
+          prev_state_id <- which( colnames(transition_matrix) == "received_dose2" )
+          
+          # Set state 
+          STATE[person_id, day_index - 1] <- prev_state_id
+          
+          # Book keeping 
+          infection_hist_mat[person_id, "dose 2 on"] <- day_index - 1
+        }
+      }
+      
+      
+      # Reload states
+      PREV_STATE_INDEX <- STATE[person_id, day_index - 1]
+      PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
+      
+    } # End of last days vaccination prob
     
     
     
@@ -1106,7 +1118,7 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
     # Debug: 
     # print(POSSIBLE_TRANSITIONS
     
-    # Hacky embedded stochastic infection possibility in state-evolution matrix
+    
     NO_OF_CONTACT_MATRIX_BASED_TRANSITION <- length(which(POSSIBLE_TRANSITIONS$transition_weights == "CALCULATE_FROM_CONTACT_MATRIX"))
     
     # Get cumulative probability of person_id to be infected by 
@@ -1129,13 +1141,9 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
       # COUNT_OF_POSSIBLE_INFECTIOUS_CONTACTS <- nrow(infectious_contacts_df)
       COUNT_OF_POSSIBLE_INFECTIOUS_CONTACTS <- length(list_of_infectious_contacts)
       
-      next_state_id <- PREV_STATE_INDEX
-      next_state_name <- STATE_NAMES[next_state_id]
+      next_state_id <- PREV_STATE_INDEX # Default state if no transition occurs
       
       if(COUNT_OF_POSSIBLE_INFECTIOUS_CONTACTS > 0) {
-        
-        # Debug: 
-        # cat("       Person:, ", person_id, " may be infected by: ", COUNT_OF_POSSIBLE_INFECTIOUS_CONTACTS, " infected neighbours\n", sep = "")
         
         # Perform each Coin toss and check for possible infection till first occurs
         # @"Tag: Sequence of probabilities"
@@ -1183,31 +1191,9 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
             
           }
           
-          
-          # Note: Introduced about 8 GB of memory and increasd overall runtime 
-          # random_coin_toss <- random_unifrom_sample_list[random_sample_iterator]
-          # 
-          # random_sample_iterator <- random_sample_iterator + 1 
-          # # Check overflow 
-          # if(random_sample_iterator > COUNT_RANDOM_SAMPLE_LIST){
-          #   random_unifrom_sample_list <- runif(COUNT_RANDOM_SAMPLE_LIST)
-          #   random_sample_iterator <- 1 # Counter to re-initialise when exhausted
-          #   
-          #   cat(" >>>>> Reinitialised random sample pool")
-          # }
-          
-          random_coin_toss <- runif(1)
-          
-          
-          # Debug: 
-          # cat("           For neighbour: ", contact_index," unifrom_random_sample(0,1): ", random_coin_toss, " , infection probability: ", getInfection_probability(contact_time), " => infection :", random_coin_toss <= getInfection_probability(contact_time), "\n", sep = "")
-          
-          # Calibration mode: 
-          if( random_coin_toss <= getInfection_probability(contact_time) ){
-          
-          # if( random_coin_toss <= contact_matrix[person_id, contact_index]){
-          # if( random_coin_toss <= getInfection_probability_w_variant(relative_infectivity, contact_time)){
-          # if( random_coin_toss <= getInfection_probability_w_variant_w_vaccine(vaccine_odds, relative_infectivity, contact_time)){
+          # if( runif(1) <= contact_matrix[person_id, contact_index]){
+          # if( runif(1) <= getInfection_probability_w_variant(relative_infectivity, contact_time)){
+          if( runif(1) <= getInfection_probability_w_variant_w_vaccine(vaccine_odds, relative_infectivity, contact_time)){
             
             # Infection event for unvaccinated
             if (PREV_STATE_NAME == "susceptible"){
@@ -1233,26 +1219,29 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
             
             ALREADY_INFECTED <- TRUE
             
-
-            
+            # Debug:
+            # cat("Person ", infectious_contacts_df[contact_index, ]$person_id_2, " infected ", person_id, " on day no. ", day_index, "\n")
             
             # Book keeping 
+            # INFECTION_HISTORY$infector[ which(INFECTION_HISTORY$target_person == person_id)  ] <- infectious_contacts_df[contact_index, ]$person_id_2
+            # INFECTION_HISTORY$day_index[ which(INFECTION_HISTORY$target_person == person_id)  ] <- day_index
+            
+            
             infection_hist_mat[person_id, "variant"] <- toString(infection_hist_mat[contact_index, "variant"])
             infection_hist_mat[person_id, "infected on"] <- day_index
             infection_hist_mat[person_id, "infected by"] <- contact_index
             
             # Debug: 
             # Bookkeeping with variants
-            # cat("           Person: ", person_id, 
-            #    ", infected with ", infection_hist_mat[person_id, "variant"],
-            #    ", by person: ", contact_index,
-            #    ", on sim day: ", day_index, "\n")
+            # cat("Person: ", person_id, 
+            #     ", infected with ", infection_hist_mat[person_id, "variant"],
+            #     ", by person: ", contact_index,
+            #     ", on sim day: ", day_index, "\n")
           }
         }
       }
       
       STATE[person_id, day_index] <- next_state_id
-      next_state_name <- STATE_NAMES[next_state_id]
      
     }
     
@@ -1261,10 +1250,9 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
     # Non-infectious, static parameter based transition
     else{
       
-      # Check if already in a final state
+      # Check final state
       if(nrow(POSSIBLE_TRANSITIONS) == 0) {
         next_state_id <- PREV_STATE_INDEX
-        next_state_name <- STATE_NAMES[next_state_id]
       }
       
       # Calculate possible transitions for non-final states
@@ -1290,7 +1278,6 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
       
       # Set state 
       STATE[person_id, day_index] <- next_state_id
-      next_state_name <- STATE_NAMES[next_state_id]
       
       # Debug: 
       # if(PREV_STATE_INDEX != next_state_id){
@@ -1309,17 +1296,17 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
         
         
         # Edge: "xx_latent_infections_isolated", "xx_pre_symptomatic_isolated", # π(2 → 4)
-        if( (PREV_STATE_NAME == "00_latent_infections_isolated") && (next_state_name == "00_pre_symptomatic_isolated")  || 
-            (PREV_STATE_NAME == "01_latent_infections_isolated") && (next_state_name == "01_pre_symptomatic_isolated")  || 
-            (PREV_STATE_NAME == "02_latent_infections_isolated") && (next_state_name == "01_pre_symptomatic_isolated")  ) {
+        if( ((PREV_STATE_INDEX == (which(STATE_NAMES == "00_latent_infections_isolated"))) && ((next_state_id == which(STATE_NAMES == "00_pre_symptomatic_isolated")))) || 
+            ((PREV_STATE_INDEX == (which(STATE_NAMES == "01_latent_infections_isolated"))) && ((next_state_id == which(STATE_NAMES == "01_pre_symptomatic_isolated")))) || 
+            ((PREV_STATE_INDEX == (which(STATE_NAMES == "02_latent_infections_isolated"))) && ((next_state_id == which(STATE_NAMES == "01_pre_symptomatic_isolated")))) ) {
             
           COUNT_NEW_INFECTIONS_TODAY <- COUNT_NEW_INFECTIONS_TODAY + 1
         }
         
         # Edge: "xx_pre_symptomatic_non_isolated", "xx_mild_isolated", # π(3 → 6)
-        else if( (PREV_STATE_NAME == "00_pre_symptomatic_non_isolated") && (next_state_name == "00_mild_isolated")  || 
-                 (PREV_STATE_NAME == "01_pre_symptomatic_non_isolated") && (next_state_name == "01_mild_isolated")  || 
-                 (PREV_STATE_NAME == "02_pre_symptomatic_non_isolated") && (next_state_name == "02_mild_isolated")  ) { 
+        else if( ((PREV_STATE_INDEX == (which(STATE_NAMES == "00_pre_symptomatic_non_isolated"))) && ((next_state_id == which(STATE_NAMES == "00_mild_isolated")))) || 
+                 ((PREV_STATE_INDEX == (which(STATE_NAMES == "01_pre_symptomatic_non_isolated"))) && ((next_state_id == which(STATE_NAMES == "01_mild_isolated")))) || 
+                 ((PREV_STATE_INDEX == (which(STATE_NAMES == "02_pre_symptomatic_non_isolated"))) && ((next_state_id == which(STATE_NAMES == "02_mild_isolated")))) ) {
           
           COUNT_NEW_INFECTIONS_TODAY <- COUNT_NEW_INFECTIONS_TODAY + 1
         }
@@ -1328,9 +1315,7 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
       }
     }
     
-    # cat("    \n...............\n")
-    
-  } # End of person iterator 
+  }
   
   
   
@@ -1338,12 +1323,7 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
   # Tabulate new infections 
   DAILY_NEW_CASES[day_index] <- COUNT_NEW_INFECTIONS_TODAY
   
-  # Check if active cases today were beyond the threshold for school closures 
-  current_day_df <- data.frame(STATE[ , day_index])
-  colnames(current_day_df) <- c("state_id")
-  COUNT_ACTIVE_CASES <- nrow(filter(current_day_df, state_id %in% STATELIST_ACTIVE_CASES))
-  # Book keeping
-  DAILY_ACTIVE_CASES [day_index] <- COUNT_ACTIVE_CASES
+  # Advance the contact matrices for the next simulation day 
   
   # if there's another contact matrix available, then iterate
   # Generates "Error: StopIteration" when reaches end
@@ -1366,6 +1346,46 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
       
     }
   )
+  
+  # contact_matrix_sans_school <- tryCatch(
+  #   {
+  #     nextElem(contact_matrix_sans_school_iterator)
+  #   },
+  #   error = function(e){
+  #     # cat("Setting up day ", day_index, " with last known Contact matrix without school contact index: ", COUNT_CONTACT_MATRIX_SANS_SCHOOL)
+  #     # contact_matrix_sans_school
+  #     
+  #     # Calibration mode: 
+  #     # Reset contact matrix to first index 
+  #     # Re-initialise iterator 
+  #     contact_matrix_sans_school_iterator <- iter(list_of_contact_matrix_sans_school)
+  #     
+  #     # Get first contact matrix
+  #     # contact_matrix_as_pairlist <- nextElem(contact_matrix_iterator)
+  #     nextElem(contact_matrix_sans_school_iterator)
+  #   }
+  # )
+  
+  
+  # Check if active cases today were beyond the threshold for school closures 
+  current_day_df <- data.frame(STATE[ , day_index])
+  colnames(current_day_df) <- c("state_id")
+  COUNT_ACTIVE_CASES <- nrow(filter(current_day_df, state_id %in% STATELIST_ACTIVE_CASES))
+  # Book keeping
+  DAILY_ACTIVE_CASES [day_index] <- COUNT_ACTIVE_CASES
+  
+  # Remove school based contacts from next simulation day 
+  # if(COUNT_ACTIVE_CASES > CONST_MAX_ACTIVE_CASES_TO_SHUTDOWN){
+  #   cat("\n >>> On day index: ", day_index, ", No. of active cases:",  COUNT_ACTIVE_CASES, ", Commercial shutdown for sim day index: ", day_index + 1)
+  #   contact_matrix <- contact_matrix_sans_school
+  # }
+  
+  # Else, keep as is
+  
+  
+  # Count hospitalised cases 
+  COUNT_HOSPITALISED_CASES <- nrow(filter(current_day_df, state_id %in% STATELIST_HOSPITALISED_CASES))
+  DAILY_HOSPITALISED_CASES [day_index] <- COUNT_HOSPITALISED_CASES
     
 }
 
@@ -1399,12 +1419,18 @@ OUTPUT_NEWCASES_FILEPATH_CSV <- paste(OUTPUT_DIRECTORY, UUID, "-DAILY-NEW-CASES.
 write.table(DAILY_NEW_CASES, sep=",", OUTPUT_NEWCASES_FILEPATH_CSV, row.names = FALSE, col.names = FALSE)
 
 
-
 # Total active cases each day
 OUTPUT_ACTIVECASES_FILEPATH_CSV <- paste(OUTPUT_DIRECTORY, UUID, "-DAILY-ACTIVE-CASES.csv",  sep = "")
 
 # write total active cases each day
 write.table(DAILY_ACTIVE_CASES, sep=",", OUTPUT_ACTIVECASES_FILEPATH_CSV, row.names = FALSE, col.names = FALSE)
+
+
+# Total hospitalised cases each day
+OUTPUT_HOSPITALISEDCASES_FILEPATH_CSV <- paste(OUTPUT_DIRECTORY, UUID, "-DAILY-HOSPITALISED-CASES.csv",  sep = "")
+
+# write total hospitalised cases each day
+write.table(DAILY_HOSPITALISED_CASES, sep=",", OUTPUT_HOSPITALISEDCASES_FILEPATH_CSV, row.names = FALSE, col.names = FALSE)
 
 
 
@@ -1428,10 +1454,12 @@ cat("\n", proc.time() - ptm)
 # table(day_1_varaint_list)
 
 # Final infections 
-cat("\n\nPost simulation counts: \n")
+cat("\nPost simulation counts: \n")
 cat("No. of Wild infections: ", length(which(infection_hist_mat[, "variant"] == "A")), "\n")
 cat("No. of Alpha infections: ", length(which(infection_hist_mat[, "variant"] == "B.1.1.7")), "\n")
 cat("No. of Delta infections: ", length(which(infection_hist_mat[, "variant"] == "B.1.617.2")), "\n")
+cat("---------\n")
 
-# cat("No. of Possiible infection events: ", random_sample_iterator, "\n")
+
+
 
