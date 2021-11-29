@@ -3,14 +3,16 @@ ptm <- proc.time()
 
 library(dplyr) # for dataframe utitlities
 library(iterators)
+library(jsonlite) # for read_json()
 
 
 SIM_SCRIPT_NAME = 'complex_model_v01_w_simulated_event_20_to_24_010_for_90d'
 
 # Event assumptions 
 EVENT_START_DATE <- 20 # starting sim day 
-EVENT_END_DATE <- 24 # ending sim day 
-
+EVENT_END_DATE <- 24 # ending sim day
+COUNT_EVENT_ATTENDANCE <- 500 
+DEMOGRAPHIC_DATA_FILEPATH <- 'scenarioBenchmark/demographicInfo-Campbellton.json'
 
 # if on the current simulation day index the number of active cases is 100 or beyond switch to contact matrices sans schools 
 # CONST_MAX_ACTIVE_CASES_TO_SHUTDOWN = 100
@@ -793,6 +795,75 @@ contact_matrix <- nextElem(contact_matrix_iterator)
 # contact_matrix_sans_school <- nextElem(contact_matrix_sans_school_iterator)
 
 
+# Construct a contact matrix for performance arts event 
+
+# Demographic data pre-processing 
+demographic_data_json <- read_json(DEMOGRAPHIC_DATA_FILEPATH)
+
+# Setup demographic data as "Person id", "Age", "Occupation type", "Household income", "Residing with"
+COUNT_PERSON_WITH_DEMOGRAPHIC_DATA <- length(demographic_data_json)
+
+demographic_data_mat <- matrix (ncol = 4, nrow = COUNT_PERSON_WITH_DEMOGRAPHIC_DATA)
+# demographic_data_mat_colnames <- c("person_id", "age", "occupation_type", "household_income", "residing_with")
+demographic_data_mat_colnames <- c("person_id", "age", "occupation_type", "household_income")
+colnames(demographic_data_mat) <- demographic_data_mat_colnames
+
+# Populate demographic data as matrix 
+for(i in 1:COUNT_PERSON_WITH_DEMOGRAPHIC_DATA){
+  temp_json_element <- demographic_data_json[[i]] 
+  
+  demographic_data_mat[i, "person_id"] <- strtoi(i) # converting all Json person_ids to person_id + 1
+  
+  demographic_data_mat[i, "age"] <- strtoi(temp_json_element$age)
+  demographic_data_mat[i, "occupation_type"] <- temp_json_element$job
+  demographic_data_mat[i, "household_income"] <- strtoi(temp_json_element$hhIncome)
+  # demographic_data_mat[i, "residing_with"] <- temp_json_element$hhResidents
+}
+
+# Debug: 
+# hist(strtoi(demographic_data_mat[ , "age"]))
+# demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 ), ]
+# demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) >= 30 & strtoi(demographic_data_mat[ , "age"]) <= 44 ), ]
+# demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) >= 45 & strtoi(demographic_data_mat[ , "age"]) <= 59 ), ]
+# demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) >= 60), ]
+#
+# length(which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 )) / COUNT_PERSON_WITH_DEMOGRAPHIC_DATA
+# length(which(strtoi(demographic_data_mat[ , "age"]) >= 30 & strtoi(demographic_data_mat[ , "age"]) <= 44 )) / COUNT_PERSON_WITH_DEMOGRAPHIC_DATA
+# length(which(strtoi(demographic_data_mat[ , "age"]) >= 45 & strtoi(demographic_data_mat[ , "age"]) <= 59 ))/COUNT_PERSON_WITH_DEMOGRAPHIC_DATA
+# length(which(strtoi(demographic_data_mat[ , "age"]) >= 60))/COUNT_PERSON_WITH_DEMOGRAPHIC_DATA
+
+
+# For a performance arts event (including and not limited to live music) 
+# attendee's age distribution is as follows: 
+# Ref: https://hillstrategies.com/wp-content/uploads/1970/01/Perfarts_report.pdf
+# 
+# For Atlantic Canada: 
+# 
+# 15-29: 34.1%
+# 30-44: 27.1% 
+# 45-59: 25.3%
+# 60+  : 18.2% 
+
+performance_arts_age_dist_mat <- matrix ( c(15, 29, 34.1,
+                                            30, 44, 27.1,
+                                            45, 59, 25.3, 
+                                            60, 100, 18.2), 
+                                          ncol = 3, nrow = 4, byrow = TRUE)
+
+performance_arts_age_dist_mat_colnames <- c("person_age_start", "person_age_end", "percentage")
+colnames(performance_arts_age_dist_mat) <- performance_arts_age_dist_mat_colnames
+
+# Extract event attendee list (of person ids with schedules) based on the age distribution
+attendee_list <- c() # Empty list
+
+temp_possible_agent_list <- intersect(demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 )], seq(1:COUNT_MAX_PERSON_ID))
+
+temp_attendee_list <- sample(temp_possible_agent_list, 
+                             min(length(temp_possible_agent_list), ceiling((performance_arts_age_dist_mat[1, 3]/100)*COUNT_EVENT_ATTENDANCE)))
+# TODO: WIP WIP WIP (loop over to contstruct the full attendee list)
+  
+# attendee_15_29 <- sample( demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 )],
+#                           ceiling((performance_arts_age_dist_mat[1, 3]/100)*COUNT_EVENT_ATTENDANCE) )
 
 
 # Initialize state 
