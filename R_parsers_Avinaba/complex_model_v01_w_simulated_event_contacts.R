@@ -888,9 +888,9 @@ contact_time <- rep(ESTIMATED_CONTACT_DURATION_IN_SECONDS, ncol(event_contact_pa
 event_contact_pairs <- rbind(event_contact_pairs, contact_time)
 event_contact_pairs <- t(event_contact_pairs)
 colnames(event_contact_pairs) <- c("person_id_1", "person_id_2", "contact_in_seconds")
-sparse_event_contact_matrix <- sparseMatrix(i = event_contact_pairs$person_id_1, 
-                                            j = event_contact_pairs$person_id_2, 
-                                            x = event_contact_pairs$contact_in_seconds)
+sparse_event_contact_matrix <- sparseMatrix(i = event_contact_pairs[ , "person_id_1"], 
+                                            j = event_contact_pairs[ , "person_id_2"], 
+                                            x = event_contact_pairs[ , "contact_in_seconds"])
 event_contact_matrix_augment <- array( data = sparse_event_contact_matrix,
                                        dim = c(COUNT_MAX_PERSON_ID, COUNT_MAX_PERSON_ID))
 
