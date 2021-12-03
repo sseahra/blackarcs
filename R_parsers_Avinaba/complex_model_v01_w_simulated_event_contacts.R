@@ -11,7 +11,8 @@ SIM_SCRIPT_NAME = 'complex_model_v01_w_simulated_event_20_to_24_010_for_90d'
 # Event assumptions 
 EVENT_START_DATE <- 20 # starting sim day 
 EVENT_END_DATE <- 24 # ending sim day
-COUNT_EVENT_ATTENDANCE <- 500 
+COUNT_EVENT_ATTENDANCE <- 100 
+ESTIMATED_CONTACT_DURATION_IN_SECONDS <- 4 * 60 * 60 # 4 hours
 DEMOGRAPHIC_DATA_FILEPATH <- 'scenarioBenchmark/demographicInfo-Campbellton.json'
 
 # if on the current simulation day index the number of active cases is 100 or beyond switch to contact matrices sans schools 
@@ -856,14 +857,45 @@ colnames(performance_arts_age_dist_mat) <- performance_arts_age_dist_mat_colname
 # Extract event attendee list (of person ids with schedules) based on the age distribution
 attendee_list <- c() # Empty list
 
-temp_possible_agent_list <- intersect(demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 )], seq(1:COUNT_MAX_PERSON_ID))
+# temp_possible_agent_list <- intersect(demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 )], seq(1:COUNT_MAX_PERSON_ID))
+# 
+# temp_attendee_list <- sample(temp_possible_agent_list, 
+#                              min(length(temp_possible_agent_list), 
+#                                  ceiling((performance_arts_age_dist_mat[1, 3]/100)*COUNT_EVENT_ATTENDANCE)))
 
-temp_attendee_list <- sample(temp_possible_agent_list, 
-                             min(length(temp_possible_agent_list), ceiling((performance_arts_age_dist_mat[1, 3]/100)*COUNT_EVENT_ATTENDANCE)))
-# TODO: WIP WIP WIP (loop over to contstruct the full attendee list)
   
 # attendee_15_29 <- sample( demographic_data_mat[which(strtoi(demographic_data_mat[ , "age"]) > 15 & strtoi(demographic_data_mat[ , "age"]) <= 29 )],
 #                           ceiling((performance_arts_age_dist_mat[1, 3]/100)*COUNT_EVENT_ATTENDANCE) )
+
+# iterate over summary stats to construct the full attendee list from available agents 
+for (row_index in 1:nrow(performance_arts_age_dist_mat)){
+  possible_agent_list <- intersect(demographic_data_mat[which(
+    strtoi( demographic_data_mat[ , "age"] ) >=  performance_arts_age_dist_mat[[row_index, "person_age_start"]] & 
+      strtoi(demographic_data_mat[ , "age"]) <= performance_arts_age_dist_mat[[row_index, "person_age_end"]] )], 
+    seq(1:COUNT_MAX_PERSON_ID))
+  
+  temp_attendee_list <- sample(possible_agent_list,
+                               min(length(possible_agent_list),
+                                   floor((performance_arts_age_dist_mat[[row_index, "percentage"]]/100)*COUNT_EVENT_ATTENDANCE)))
+  
+  attendee_list <- c(attendee_list, temp_attendee_list)
+  
+}
+
+# Convert to contact pairlist and corresponding matrix
+event_contact_pairs <- combn(attendee_list, 2)
+contact_time <- rep(ESTIMATED_CONTACT_DURATION_IN_SECONDS, ncol(event_contact_pairs))
+event_contact_pairs <- rbind(event_contact_pairs, contact_time)
+event_contact_pairs <- t(event_contact_pairs)
+colnames(event_contact_pairs) <- c("person_id_1", "person_id_2", "contact_in_seconds")
+sparse_event_contact_matrix <- sparseMatrix(i = event_contact_pairs$person_id_1, 
+                                            j = event_contact_pairs$person_id_2, 
+                                            x = event_contact_pairs$contact_in_seconds)
+event_contact_matrix_augment <- array( data = sparse_event_contact_matrix,
+                                       dim = c(COUNT_MAX_PERSON_ID, COUNT_MAX_PERSON_ID))
+
+# Debug 
+# print(attendee_list)
 
 
 # Initialize state 
