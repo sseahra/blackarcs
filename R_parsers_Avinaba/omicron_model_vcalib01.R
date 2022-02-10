@@ -37,7 +37,7 @@ TOTAL_SIMULATION_DAYS <- 30
 # CONST_MAX_CHANCE <- 0.015
 # CONST_MAX_CHANCE <- 0.010
 # CONST_MAX_CHANCE <- 0.005
-CONST_MAX_CHANCE <- 0.00375 # From Robert
+CONST_MAX_CHANCE <- 0.00375/3.42257472363763 # From Robert
 # CONST_MAX_CHANCE <- 0.002
 # ----- End of analysis ---- 
 
@@ -95,7 +95,8 @@ VOC_COLNAMES =  c("WHO label",
 CONST_mu_1 = 1.0 # infectiousness of wild variant treated as default  
 CONST_mu_2 = 1.5 # infectiousness of Alpha w.r.t wild variant 
 CONST_mu_3 = 1.8 # infectiousness of Delta w.r.t Alpha variant
-CONST_mu_4 = 3.42257472363763 # infectiousness of Omicron w.r.t Delta variant
+CONST_mu_4 = 3.42257472363763 # infectiousness of Omicron w.r.t Wild variant, as per Robert
+# CONST_mu_4 = 3.9 # infectiousness of Omicron w.r.t Wild variant, as suggested by Dr. Seahra 
 
 # For people who are vaccinated efficacy odds parameters (for wild variant)
 CONST_epsilon_inf_wild_01 <- 0.6  # 1 - CONST_epsilon_if_wild_01 * prob of infection without vaccine = Prob infection from wild variant with 1 dose 
@@ -180,7 +181,7 @@ CONST_epsilon_inf_omicron_03 <- 0.725
 
 voc_05 <- data.frame("Omicron", 
                      "B.1.1.529", 
-                     CONST_mu_1 * CONST_mu_2 * CONST_mu_3 * CONST_mu_4, 
+                     CONST_mu_1 * CONST_mu_4, # CONST_mu_1 * CONST_mu_2 * CONST_mu_3 * CONST_mu_4, 
                      CONST_epsilon_inf_omicron_01,
                      CONST_epsilon_inf_omicron_02, 
                      CONST_epsilon_inf_omicron_03, 
@@ -1552,7 +1553,7 @@ for(person_id in first_disease_import){
   # Check which variant to infect with
   STATE[person_id , 1] <- infected_state
   
-  # Book keeping 
+ # Book keeping 
   # day_1_variants_mat[toString(infecting_variant), "count"] <- day_1_variants_mat[toString(infecting_variant), "count"] + 1
   day_1_varaint_list <- append(day_1_varaint_list, toString(infecting_variant))
   
@@ -2064,6 +2065,7 @@ for(day_index in 2:TOTAL_SIMULATION_DAYS){
         
         
         # Edge: "xx_latent_infections_isolated", "xx_pre_symptomatic_isolated", # π(2 → 4)
+        
         if( 
             # For Wild, Alpha, Beta, Gamma, Delta 
             (PREV_STATE_NAME == "00_latent_infections_isolated") && (next_state_name == "00_pre_symptomatic_isolated")  || 
