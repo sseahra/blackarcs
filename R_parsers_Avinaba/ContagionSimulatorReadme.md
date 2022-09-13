@@ -208,11 +208,11 @@ The ```"internal id"``` is just a mapping of $g(citisketch\_location\_id, citisk
 We are yet to account for $activity\ type$, it is a work in progress.
 
 $\cdot$ | person_id_1 | person_id_2 | contact_in_seconds | citisketch_location_id | citisketch_location_type | internal_id
---- | --- | --- | --- | --- | --- | --- | ---
-**contact event  1** | | | |
-**contact event  1** | | | |
-**...** | | | |
-**contact event K** | | | |
+--- | --- | --- | --- | --- | --- | ---
+**contact event  1** | | | | | |
+**contact event  1** | | | | | |
+**...** | | | | | |
+**contact event K** | | | | | |
 
 &nbsp;
 
@@ -239,7 +239,7 @@ for(person_id in 1:TOTAL_SIMULATED_PERSONS){
 }
 ```
 
-Both are nested loops within an outer loop which iterates over the list of available Contact Matrix files. 
+Both are nested loops within an outer loop which iterates over the list of available Contact Matrix files.
 
 &nbsp;
 
