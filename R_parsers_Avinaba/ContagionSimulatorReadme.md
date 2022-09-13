@@ -44,8 +44,8 @@ This is an encoding of disease progression of individuals (in Individual level m
 Given any compartment model, we can identify the "infection" propagating transition and any number of non-infection type transition.
 
 For example, consider the:
-* $$Susceptible \rarr Infected \rarr Removed$$ (**SIR**) and the
-* $$Susceptible \rarr Latent \rarr Infectious \rarr Removed$$ (**SLIR**) model
+* $$Susceptible \rightarrow Infected \rightarrow Removed$$ (**SIR**) and the
+* $$Susceptible \rightarrow Latent \rightarrow Infectious \rightarrow Removed$$ (**SLIR**) model
 
 And their corresponding stochastic edges:
 ```mermaid {theme="hand"}
@@ -97,13 +97,13 @@ And $latency\_period$ is the mean length of time a person is carrying a contagio
 
 ### Simulating non-infection edges
 Let $X_{i}$ be the state of a an individual $X$ at $i^{th}$ simulation step.
-Then, $X_{i+1}$, is a state transition inferred from an adjacency matrix a.k.a transition matrix (barring infecting kind) $A \rarr B$ with a constant $k_{A \rarr B} \in [0, 1]$ is:
+Then, $X_{i+1}$, is a state transition inferred from an adjacency matrix a.k.a transition matrix (barring infecting kind) $A \rightarrow B$ with a constant $k_{A \rightarrow B} \in [0, 1]$ is:
 
-$$Pr(X_{i+1} = B|X_{i} = A) = k_{A \rarr B} $$
+$$Pr(X_{i+1} = B|X_{i} = A) = k_{A \rightarrow B} $$
 
 Please note that the probability of $X$ not transitioning, to stay in state $A$ from $i$ to $i+1$ simulation step is:
 
-$$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rarr A'} $$
+$$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
  where $A' \in \mathbb{S}_A$ set of all possible tranistion states from $A$ and, $A \neq A'$.
 
  In the simplest form this is a Markov Chain[^2]
@@ -137,7 +137,7 @@ For simulating a single strain of contagion, $State$ and the $ContactMatrix$ is 
 This may be abstracted as a function that maps two individuals $X, Y$ and a simulation step $i$ to a shared time $t$ in the aggregated case, or a list of shared times $t_1, t_2, ... t_m$ at $l$ locations for the location specific case with $l$ is independent of $m$. i.e. two individuals may have multiple shared times at multiple locations.  
 
 $$
-f(X, Y, i) \rarr
+f(X, Y, i) \rightarrow
 \begin{cases}
  t,\  if\ \  aggregated \\
 t_m \in \mathbb{T}_{X,Y,i} = {t_1, t_2, ... t_m},\  if\ \  location\ based
@@ -171,7 +171,7 @@ The no. of columns are initialised as follows:
 ```R
 colnames(contact_matrix_as_pairlist) <- c("person_id_1", "person_id_2", "contact_in_seconds", "citisketch_location_id",	"citisketch_location_type", "internal_id")
 ```
-The ```"internal id"``` is just a mapping of $(citisketch\_location\_id, citisketch\_location\_type) \rarr i \in \mathbb{N} = {1, 2, ...}$
+The ```"internal id"``` is just a mapping of $(citisketch\_location\_id, citisketch\_location\_type) \rightarrow i \in \mathbb{N} = {1, 2, ...}$
 We are yet to account for $activity\ type$, it is a work in progress.
 &nbsp;
 
