@@ -12,6 +12,8 @@ Accommodate individual level network based stochastic contagion simulation over 
 * [Interpreting contact matrices](#interpreting-contact-matrices)
   * [Aggregated Contact Matrix](#aggregated-contact-matrix)
   * [Location based Contact Matrix](#location-based-contact-matrix)
+  * [Pre-processing as neighbour lists](#pre-processing-as-neighbour-lists)
+  * [Iterating for multi-step simulation](#iterating-for-multi-step-simulation)
   &nbsp;
   &nbsp;
 
@@ -134,7 +136,7 @@ For simulating a single strain of contagion, $State$ and the $ContactMatrix$ is 
 &nbsp;
 
 ## Interpreting contact matrices
-This may be abstracted as a function that maps two individuals $X, Y$ and a simulation step $i$ to a shared time $t$ in the aggregated case, or a list of shared times $t_1, t_2, ... t_m$ at $l$ locations for the location specific case with $l$ is independent of $m$. i.e. two individuals may have multiple shared times at multiple locations.  
+For a single time-step, this may be abstracted as a function that maps two individuals $X, Y$ and a simulation step $i$ to a shared time $t$ in the aggregated case, or a list of shared times $t_1, t_2, ... t_m$ at $l$ locations for the location specific case with $l$ is independent of $m$. i.e. two individuals may have multiple shared times at multiple locations.  
 
 $$
 f(X, Y, i) \rightarrow
@@ -160,19 +162,109 @@ CONTACT_MATRIX_DIR <- 'SIR_calib_contact_matrix'
 
 ### Aggregated Contact Matrix
 Again, we encode this in a 2D-Matrix of dimension $no\_of\_individuals \times no\_of\_individuals$ from .
-This is intialised at line no. **2313 - 2336**
+This is intialised at line no. **2436 - 2520**
+```R
+# Read contact matrix
+contact_matrix_as_pairlist <- read.table(CONTACT_MATRIX_AS_PAIRLIST_FILENAME, sep=",")
+
+# Adding readable column names
+colnames(contact_matrix_as_pairlist) <- c("person_id_1", "person_id_2", "contact_in_seconds")
+
+# Converting to sparse matrices
+sparse_contact_matrix <- sparseMatrix(i = contact_matrix_as_pairlist$person_id_1,
+                                      j = contact_matrix_as_pairlist$person_id_2,
+                                      x = contact_matrix_as_pairlist$contact_in_seconds,
+                                      dims = c(TOTAL_SIMULATED_PERSONS, TOTAL_SIMULATED_PERSONS))
+
+# convert to array
+contact_matrix <- array( data = sparse_contact_matrix,
+                         dim = c(TOTAL_SIMULATED_PERSONS, TOTAL_SIMULATED_PERSONS))
+```
+
+$\cdot$ | 1 | 2 | ... |  N
+--- | --- | --- | --- | ---
+**1** | | | |
+**2** | | | |
+**...** | | | |
+**N** | | | |
+
 &nbsp;
 
 ### Location based Contact Matrix
 This is interpreted as is, we keep this as a pairlist of dimension $no\_of\_columns \times no\_of\_contact\_events$ from
-This is intialised at line no. **2336 - 2358**
+This is intialised at line no. **2520 - 2594**
+
+
 
 The no. of columns are initialised as follows:
 ```R
-colnames(contact_matrix_as_pairlist) <- c("person_id_1", "person_id_2", "contact_in_seconds", "citisketch_location_id",	"citisketch_location_type", "internal_id")
+# Read contact matrix
+contact_matrix_as_pairlist <- read.table(CONTACT_MATRIX_AS_PAIRLIST_FILENAME, sep=",", header = TRUE)
+
+# Overriding column names
+colnames(contact_matrix_as_pairlist) <- c("person_id_1", "person_id_2", "contact_in_seconds", "citisketch_location_id", "citisketch_location_type",  "internal_id")
 ```
-The ```"internal id"``` is just a mapping of $(citisketch\_location\_id, citisketch\_location\_type) \rightarrow i \in \mathbb{N} = {1, 2, ...}$
+The ```"internal id"``` is just a mapping of $g(citisketch\_location\_id, citisketch\_location\_type) \rightarrow i \in \mathbb{N} = {1, 2, ...}$
 We are yet to account for $activity\ type$, it is a work in progress.
+
+$\cdot$ | person_id_1 | person_id_2 | contact_in_seconds | citisketch_location_id | citisketch_location_type | internal_id
+--- | --- | --- | --- | --- | --- | --- | ---
+**contact event  1** | | | |
+**contact event  1** | | | |
+**...** | | | |
+**contact event K** | | | |
+
+&nbsp;
+
+### Pre-processing as neighbour lists
+During simulation, the above data-structures are filtered or sliced by an individual id to get a their list of neighbours and then further filtered based on their state on the disease model.
+Therefore, as advised by Dr. Seahra, pre-processing the neighbours into constant time lookup data-structures offers a significant speed up of simulation time.
+Please note, the pre-processing step introduces a delay in simulation setup time, about 17 minutes (1023.4s) for pre-processing 30 location based contact matrices resulting in about reducing about 40 seconds from a 90 second simulation time of 210 days.  
+However, as most of experiments are batches of 100~200 simulation runs, of 210 days (time-steps) with an available pool of 30 contact matrices, the one-time-cost build cost is outweighed by speedup obtained for every run.
+
+For Aggregated interpretation, pre-processing is implemented at line **2501**
+```R
+for(person_id in 1:TOTAL_SIMULATED_PERSONS){
+  list_day_x_person_x_contact[[matrix_index]][[person_id]] <- which(contact_matrix[person_id, ] > 0)
+}
+```
+
+For Location based interpretation, it is implemented at line **2568**
+```R
+for(person_id in 1:TOTAL_SIMULATED_PERSONS){
+  list_day_x_person_x_contact[[matrix_index]][[person_id]] <- contact_matrix_as_pairlist[which(contact_matrix_as_pairlist$person_id_1 == person_id), ]$person_id_2
+  list_day_x_person_x_contact_time[[matrix_index]][[person_id]] <- contact_matrix_as_pairlist[which(contact_matrix_as_pairlist$person_id_1 == person_id), ]$contact_in_seconds
+  list_day_x_person_x_contact_location_type[[matrix_index]][[person_id]] <- contact_matrix_as_pairlist[which(contact_matrix_as_pairlist$person_id_1 == person_id), ]$citisketch_location_type
+  list_day_x_person_x_contact_location_id[[matrix_index]][[person_id]] <- contact_matrix_as_pairlist[which(contact_matrix_as_pairlist$person_id_1 == person_id), ]$citisketch_location_id
+}
+```
+
+Both are nested loops within an outer loop which iterates over the list of available Contact Matrix files. 
+
+&nbsp;
+
+### Iterating for multi-step simulation
+At present the simulator cycles through the available contact matrices in order when the simulation step exceeds the number of available matrices. This sequence is generated at line no. **3146-3161**
+```R
+getContactMatrixIndexForSimDay <- function(simulation_day_index){
+  if( simulation_day_index <= 1 ){
+    cat("\n[FATAL ERROR] Requested simulation day index: ", simulation_day_index, " is out of bounds.",
+        "\n              Expected range (2:", TOTAL_SIMULATION_DAYS, ").",
+        "\n Terminating simulation")
+    stop()
+  } else if( (simulation_day_index) <= COUNT_CONTACT_MATRIX + 1){
+    return (simulation_day_index - 1)
+  }
+
+  # else
+  return( ( (simulation_day_index - 2) %% COUNT_CONTACT_MATRIX) + 1)
+}
+
+contact_matrix_index_lookup_list = sapply(2:TOTAL_SIMULATION_DAYS, getContactMatrixIndexForSimDay)
+contact_matrix_index_lookup_list <- c(NA, contact_matrix_index_lookup_list)
+```
+
+This may be modified to account for alternates to the (30 matrix) month long sequence for perhaps a shorter (7 matrix) weekday-weekend sequence or a longer (90 matrix) holiday season with pre-holiday and post-holiday month sequence.
 &nbsp;
 
 
