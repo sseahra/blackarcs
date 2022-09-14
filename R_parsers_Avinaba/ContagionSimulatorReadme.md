@@ -289,7 +289,7 @@ A single infection event for an infected individual $X_I \in I$ to infect $X_S \
 
 Simplifying the names and putting it all together:
 $$
-Pr(X_I \underrightarrow{infects} X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})
+Pr(X_I-infects-X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})
 $$
 
 This is implemented at line no. **356**
