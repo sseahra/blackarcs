@@ -14,8 +14,10 @@ Accommodate individual level network based stochastic contagion simulation over 
   * [Location based Contact Matrix](#location-based-contact-matrix)
   * [Pre-processing as neighbour lists](#pre-processing-as-neighbour-lists)
   * [Iterating for multi-step simulation](#iterating-for-multi-step-simulation)
-* [Simulating contagion spread](#Simulating-contagion-spread)
+* [Simulating contagion spread](#simulating-contagion-spread)
   * [Infection event](#infection-event)
+* [Variants of Concern](#variants-of-concern)
+  * [Infection History](#infection-history)
   &nbsp;
   &nbsp;
 
@@ -96,7 +98,7 @@ $\cdot$ | susceptible | latent | infectious | removed
 **removed** | | | |
 
 Where $\gamma$ is the inverse of mean length of infectious period or usually termed as "removal rate".
-And $latency\_period$ is the mean length of time a person is carrying a contagion before becoming infectious. Therefore, for SLIR the mean period of a person carrying the contagion is $latency\_period + \frac{1}{\gamma'}$, where $\gamma'$ is the removal rate from infectious to removed compartments.
+And $latency \textunderscore period$ is the mean length of time a person is carrying a contagion before becoming infectious. Therefore, for SLIR the mean period of a person carrying the contagion is $latency \textunderscore period + \frac{1}{\gamma'}$, where $\gamma'$ is the removal rate from infectious to removed compartments.
 &nbsp;
 
 ### Simulating non-infection edges
@@ -123,7 +125,7 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
 &nbsp;
 
 ### Individual state management
-Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$no \textunderscore of \textunderscore individuals_{rows} \times no \textunderscore of \textunderscore simulation \textunderscore steps_{columns}$$
+Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$ no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows} $$
 
 This is initalised at line no. **2618**.
 ```R
@@ -206,7 +208,7 @@ contact_matrix_as_pairlist <- read.table(CONTACT_MATRIX_AS_PAIRLIST_FILENAME, se
 # Overriding column names
 colnames(contact_matrix_as_pairlist) <- c("person_id_1", "person_id_2", "contact_in_seconds", "citisketch_location_id", "citisketch_location_type",  "internal_id")
 ```
-The ```"internal id"``` is just a mapping of $g(citisketch\_location\_id, citisketch\_location\_type) \rightarrow i \in \mathbb{N} = {1, 2, ...}$
+The ```"internal id"``` is just a mapping of $g(citisketch \textunderscore location \textunderscore id, citisketch \textunderscore location \textunderscore type) \rightarrow i \in \mathbb{N} = {1, 2, ...}$
 We are yet to account for $activity\ type$, it is a work in progress.
 
 $\cdot$ | person_id_1 | person_id_2 | contact_in_seconds | citisketch_location_id | citisketch_location_type | internal_id
@@ -266,26 +268,30 @@ contact_matrix_index_lookup_list = sapply(2:TOTAL_SIMULATION_DAYS, getContactMat
 contact_matrix_index_lookup_list <- c(NA, contact_matrix_index_lookup_list)
 ```
 
-This may be modified to account for alternates to the (30 matrix) month long sequence for perhaps a shorter (7 matrix) weekday-weekend sequence or a longer (90 matrix) holiday season with pre-holiday and post-holiday month sequence.
+This enables for swapping the (30 matrix) month long sequence for perhaps a shorter (7 matrix) weekday-weekend sequence or a longer (90 matrix) holiday season with pre-holiday and post-holiday month sequence with just changing the directory ```CONTACT_MATRIX_DIR```.
 
-**Errata: ```Contagion_Simulator_vcalib13.R``` has a bug, when utilising ```contact_matrix_index_lookup_list``` incorrectly starts lookup with ```day_index == 1``` for the first day.
+**Errata: ```Contagion_Simulator_vcalib13.R``` has a bug, when utilising ```contact_matrix_index_lookup_list``` the simulation loop incorrectly starts lookup with ```day_index == 1``` for the first day.
 This exists on line no. *6353, 6356, 6421, 6632, 6635, 6640, 6664* and ill be corrected in the next release.**
+
+Please note, it is a minor bug, effectively reducing the simulation time by 1 time step for most cases.
 &nbsp;
 &nbsp;
 
 ## Simulating contagion spread
-To ascertain new infections for simulation step $i$, iterating over infectious individuals $X \in I_{i-1}$ and their susceptible neighbours $susceptible\_neighbour(X) = neighbour(X) \cap S_{i-1}$, for simulation step $i -1$ provides the highest simulation speed.
+To ascertain new infections for simulation step $i$, iterating over infectious individuals $X \in I_{i-1}$ and their susceptible neighbours $susceptible \textunderscore neighbour(X) = neighbour(X) \cap S_{i-1}$, for simulation step $i -1$ provides the highest simulation speed.
 Especially, once any of susceptible individual has been infected by infectious individual $X_p \in I_{i-1} = {X_1, X_2, ... X_k}$, they may be removed from the overall set of Susceptibles $S_{i-1}$.
 And consequently need not be considered for computing possible infection from $X_q \in I_{i - 1}, q \neq p$.
 This is implemented with a for loop, at line no.: **6347-6895**
+
+There is an alternate section that instead, iterates over set of susceptibles and their infected neighbours with a switching parameter based on count of infectious individuals, but it is not-maintained for ```Contagion_Simulator_vcalib13.R```. We plan to patch it in a subsequent release.
 &nbsp;
 
 ### Infection event
-A single infection event for an infected individual $X_I \in I$ to infect $X_S \in S$ with $contact\_time = t$, where $I$ and $S$ are sets of infectious and susceptible individuals respectively is a discrete probability governed by the following paramaters:
+A single infection event for an infected individual $X_I \in I$ to infect $X_S \in S$ with $contact \textunderscore time = t$, where $I$ and $S$ are sets of infectious and susceptible individuals respectively is a discrete probability governed by the following paramaters:
 * $A$ : Base infection chance
 * $t_{ramp-up}$ : A constant time parameter that offsets the infection chance to be low below a certain threshold
 * $\mu_{strain}$ : Relative infectivity of a particular $strain$
-* $\epsilon(inf)_{strain-{dose\_no}}$ : Vaccine efficacy for a particular $strain$ of contagion carried by $X_I$ with respect to the $dose_no$, i.e. no. of doses of vaccines administered to $X_S$.
+* $\epsilon(inf)_{strain-{dose_n}}$ : Vaccine efficacy for a particular $strain$ of contagion carried by $X_I$ with respect to the $dose_n$, i.e. no. of doses of vaccines administered to $X_S$.
 
 Simplifying the names and putting it all together:
 $$Pr(X_I\ \  \underrightarrow{infects}\ \  X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})$$
@@ -306,11 +312,53 @@ CONST_MAX_CHANCE <- 0.00300
 ...
 ```
 
-Please note the base infection chance may be parameterised, with resepect to contact event metadata of $location\_type$ and $activity\_type$.
+Please note the base infection chance may be parameterised, with resepect to contact event metadata of $location \textunderscore type$ and $activity \textunderscore type$.
 
-On the next section we review the data structures housing $\mu_{strain}$, $\epsilon(inf)_{strain-{dose\_no}}$ ```active_voc_mat``` for different strains of contagion and the ```infection_hist_mat``` keeping track of simulation run specific infection meta-data.   
+On the next section we review the data structures housing $\mu_{strain}$, $\epsilon(inf)_{strain-{dose_n}}$ ```active_voc_mat``` for different strains of contagion and the ```infection_hist_mat``` keeping track of simulation run specific infection meta-data.   
+&nbsp;
 &nbsp;
 
-[^1]: Csardi G, Nepusz T (2006). “The igraph software package for complex network research.” InterJournal, Complex Systems, 1695. https://igraph.org
+## Variants of Concern
+As the name suggests these are strains of a contagion the agencies responsible for public health monitor. In context to SARS-CoV-2, the Government of Canada maintains their Variants of Concern (VOC) and Variants of Interest(VOI) definition on their website[^3].
 
-[^2]: Markov chain, A Markov chain or Markov process is a stochastic model describing a sequence of possible events... https://en.wikipedia.org/wiki/Markov_chain
+
+This simulator is fed a subset of this data along with $\mu_{strain}$, $\epsilon(inf)_{strain-{dose_n}}$ in a dataframe name ```voc_df```, intialised on line no. : **453-571**
+
+It has the following structure:
+
+WHO Label | variant | Relative infectivity | Vaccine dose 1 efficacy | Vaccine dose 2 efficacy | Vaccine dose 3 efficacy | Proportion
+--- | --- | --- | --- | --- | --- | ---
+
+Here "variant" is a re-label of "Parent lineage" as defined in the website[^3]
+
+The proportion of variants to intialise as part of the initial condition for a simulation scenario, i.e first day infection population is defined at line no. **588-630**
+
+For example, a diagnostic scenario would be to initalise all the available VOCs with equal proportions and track their propagation:
+```R
+voc_df <- voc_df %>% mutate_cond(`WHO label` == "Omicron" & `variant` == "B.1.1.529", 'Proportion' = 20)
+voc_df <- voc_df %>% mutate_cond(`WHO label` == "Delta" & `variant` == "B.1.617.2", 'Proportion' = 20)
+voc_df <- voc_df %>% mutate_cond(`WHO label` == "Wild" & `variant` == "A", 'Proportion' = 20)
+voc_df <- voc_df %>% mutate_cond(`WHO label` == "Alpha" & `variant` == "B.1.1.7", 'Proportion' = 20)
+voc_df <- voc_df %>% mutate_cond(`WHO label` == "Delta" & `variant` == "B.1.617.2", 'Proportion' = 20)
+```
+
+Before, beginning a simulation a subset of ```voc_df``` of proportions > 0 is initalised at line no. **2729** as ```active_voc_mat```
+```R
+active_voc_mat <- as.matrix.data.frame(filter(voc_df, Proportion > 0))
+```
+&nbsp;
+
+### Infection History
+A matrix of dimension $6_{columns} \times no \textunderscore of \textunderscore indviduals$ named ```infection_hist_mat``` maintains the spread of concurrent propagation of contagions among the individuals.  
+It is re-intialised for every simulation run and has the following structure:
+$\cdot$ | variant | infected on | infected by | dose 1 on | dose 2 on | dose 3 on
+--- | --- | --- | --- | --- | --- | ---
+**row 1** | | | | | |
+**row 2** | | | | | |
+**...** | | | | | |
+**row N** | | | | | |  
+
+Each row corresponds to a numeric agent id and is looked up along with ```active_voc_df``` for determining the context of each infection event.
+Please note, during simulation this also provides a efficient mechanism for computing non-Markovian transitions based on age of infection. And post-simulation this may be utilised for visualising infection trees.
+&nbsp;
+&nbsp;
