@@ -288,9 +288,7 @@ A single infection event for an infected individual $X_I \in I$ to infect $X_S \
 * $\epsilon(inf)_{strain-{dose\_no}}$ : Vaccine efficacy for a particular $strain$ of contagion carried by $X_I$ with respect to the $dose_no$, i.e. no. of doses of vaccines administered to $X_S$.
 
 Simplifying the names and putting it all together:
-$$
-Pr(X_I-infects-X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})
-$$
+$$Pr(X_I\ \  \underrightarrow{infects}\ \  X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})$$
 
 This is implemented at line no. **356**
 ```R
