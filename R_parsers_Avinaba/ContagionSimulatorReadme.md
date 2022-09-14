@@ -83,15 +83,15 @@ For example, for SIR and SLIR the output data structure are the following matric
 
  $\cdot$ | susceptible | infected | removed
 --- | --- | --- | ---
-**susceptible** | | $$Pr(f(contact\_time))$$ |
+**susceptible** | | $$Pr(f(contact \textunderscore time))$$ |
 **infected** | | | $$\gamma$$
 **removed** | | |
 
 
 $\cdot$ | susceptible | latent | infectious | removed
 --- | --- | --- | --- | ---
-**susceptible** | | $$Pr(f(contact\_time))$$ | |
-**latent** | | | $$(latency\_period)^{-1}$$ |
+**susceptible** | | $$Pr(f(contact \textunderscore time))$$ | |
+**latent** | | | $$(latency \textunderscore period)^{-1}$$ |
 **infectious** | | | | $$\gamma'$$ |
 **removed** | | | |
 
@@ -123,7 +123,7 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
 &nbsp;
 
 ### Individual state management
-Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$no\_of\_individuals_{rows} \times no\_of\_simulation\_steps_{columns}$$
+Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$no \textunderscore of \textunderscore individuals_{rows} \times no \textunderscore of \textunderscore simulation \textunderscore steps_{columns}$$
 
 This is initalised at line no. **2618**.
 ```R
@@ -163,7 +163,7 @@ CONTACT_MATRIX_DIR <- 'SIR_calib_contact_matrix'
 &nbsp;
 
 ### Aggregated Contact Matrix
-Again, we encode this in a 2D-Matrix of dimension $no\_of\_individuals \times no\_of\_individuals$ from .
+Again, we encode this in a 2D-Matrix of dimension $no \textunderscore of \textunderscore individuals \times no \textunderscore of \textunderscore individuals$ from .
 This is intialised at line no. **2436 - 2520**
 ```R
 # Read contact matrix
@@ -193,7 +193,7 @@ $\cdot$ | 1 | 2 | ... |  N
 &nbsp;
 
 ### Location based Contact Matrix
-This is interpreted as is, we keep this as a pairlist of dimension $no\_of\_columns \times no\_of\_contact\_events$ from
+This is interpreted as is, we keep this as a pairlist of dimension $no \textunderscore of \textunderscore columns \times no \textunderscore of \textunderscore contact \textunderscore events$ from
 This is intialised at line no. **2520 - 2594**
 
 
