@@ -14,15 +14,17 @@ Accommodate individual level network based stochastic contagion simulation over 
   * [Location based Contact Matrix](#location-based-contact-matrix)
   * [Pre-processing as neighbour lists](#pre-processing-as-neighbour-lists)
   * [Iterating for multi-step simulation](#iterating-for-multi-step-simulation)
+* [Simulating contagion spread](#Simulating-contagion-spread)
+  * [Infection event](#infection-event)
   &nbsp;
   &nbsp;
 
 ## Subgoals
 * Ability to design and or import Compartmental models in epidemiology on-demand.
+  * Simulate non-infection transitions as a sampling of negative binomial distribution.
   * Interpret contact matrices with aggregated pairwise contact time and,
   * Interpret contact matrices with location specific contact time (with activity types)
-  * Interpret contact times and context to infection probability
-  * Simulate non-infection transitions as a sampling of negative binomial distribution.
+  * Interpret contact times and context of infection probability
 &nbsp;
 
 * Ability to maintain different proportions of contagion strains.
@@ -115,7 +117,7 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
  ```R
  evolveNonSusceptible <- function(person_id)
  ```
- We revisit this after we have taken a quick look at the data structures that encodes contact matrices and states of individuals.
+ This works with a global context of simulation time step ```day_index```, ```transition_matrix``` and the states of individuals encoded in ```STATE``` a 2D matrix we review in the next section.
 
  Please note, without introducing infection as a function of contact matrices, an individual level network based stochastic simulation may simply be run with a constant $\beta$ defining the infection rate or flow from susceptible state to the corresponding infected state.
 &nbsp;
@@ -265,8 +267,51 @@ contact_matrix_index_lookup_list <- c(NA, contact_matrix_index_lookup_list)
 ```
 
 This may be modified to account for alternates to the (30 matrix) month long sequence for perhaps a shorter (7 matrix) weekday-weekend sequence or a longer (90 matrix) holiday season with pre-holiday and post-holiday month sequence.
+
+**Errata: ```Contagion_Simulator_vcalib13.R``` has a bug, when utilising ```contact_matrix_index_lookup_list``` incorrectly starts lookup with ```day_index == 1``` for the first day.
+This exists on line no. *6353, 6356, 6421, 6632, 6635, 6640, 6664* and ill be corrected in the next release.**
+&nbsp;
 &nbsp;
 
+## Simulating contagion spread
+To ascertain new infections for simulation step $i$, iterating over infectious individuals $X \in I_{i-1}$ and their susceptible neighbours $susceptible\_neighbour(X) = neighbour(X) \cap S_{i-1}$, for simulation step $i -1$ provides the highest simulation speed.
+Especially, once any of susceptible individual has been infected by infectious individual $X_p \in I_{i-1} = {X_1, X_2, ... X_k}$, they may be removed from the overall set of Susceptibles $S_{i-1}$.
+And consequently need not be considered for computing possible infection from $X_q \in I_{i - 1}, q \neq p$.
+This is implemented with a for loop, at line no.: **6347-6895**
+&nbsp;
+
+### Infection event
+A single infection event for an infected individual $X_I \in I$ to infect $X_S \in S$ with $contact\_time = t$, where $I$ and $S$ are sets of infectious and susceptible individuals respectively is a discrete probability governed by the following paramaters:
+* $A$ : Base infection chance
+* $ramp\_up\_time$ : A constant time parameter that offsets the infection chance to be low below a certain threshold
+* $\mu_{strain}$ : Relative infectivity of a particular $strain$
+* $\epsilon(inf)_{strain_{dose\_no}}$ : Vaccine efficacy for a particular $strain$ of contagion carried by $X_I$ with respect to the $dose_no$, i.e. no. of doses of vaccines administered to $X_S$.
+
+Simplifying the names and putting it all together:
+$$
+Pr(X_I \ \underrightarrow{infects}\  X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})
+$$
+
+This is implemented at line no. **356**
+```R
+# Infection probability w.r.t infectivity of the variant, vaccination status of potentially infected and contact time
+getInfection_probability_w_variant_w_vaccine <- function(vaccine_odds, relative_infectivity, contact_time)
+```
+
+The base infection chance is one of the primary parameter of configuration ```CONST_MAX_CHANCE``` and a series of experimental values are listed starting from line no. : **143**
+```R
+# Amplitude of infection      |   For Aggregated            |   For Location wise
+# CONST_MAX_CHANCE <- 0.00100 # ~ 29.74% outbreaks - 500 runs | ~ 25.2% outbreaks - 500 runs
+# CONST_MAX_CHANCE <- 0.00200 # ~ 75% outbreaks - 400 runs    | ~ 75% - 300 runs
+# CONST_MAX_CHANCE <- 0.00250 # ~ 94% outbreaks - 200 runs    | ~ 78.57 % - 140 runs
+CONST_MAX_CHANCE <- 0.00300
+...
+```
+
+Please note the base infection chance may be parameterised, with resepect to contact event metadata of $location\_type$ and $activity\_type$.
+
+On the next section we review the data structures housing $\mu_{strain}$, $\epsilon(inf)_{strain_{dose\_no}}$ ```active_voc_mat``` for different strains of contagion and the ```infection_hist_mat``` keeping track of simulation run specific infection meta-data.   
+&nbsp;
 
 [^1]: Csardi G, Nepusz T (2006). “The igraph software package for complex network research.” InterJournal, Complex Systems, 1695. https://igraph.org
 
