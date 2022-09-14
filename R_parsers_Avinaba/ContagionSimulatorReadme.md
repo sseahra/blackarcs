@@ -283,13 +283,13 @@ This is implemented with a for loop, at line no.: **6347-6895**
 ### Infection event
 A single infection event for an infected individual $X_I \in I$ to infect $X_S \in S$ with $contact\_time = t$, where $I$ and $S$ are sets of infectious and susceptible individuals respectively is a discrete probability governed by the following paramaters:
 * $A$ : Base infection chance
-* $ramp\_up\_time$ : A constant time parameter that offsets the infection chance to be low below a certain threshold
+* $t_{ramp-up}$ : A constant time parameter that offsets the infection chance to be low below a certain threshold
 * $\mu_{strain}$ : Relative infectivity of a particular $strain$
-* $\epsilon(inf)_{strain_{dose\_no}}$ : Vaccine efficacy for a particular $strain$ of contagion carried by $X_I$ with respect to the $dose_no$, i.e. no. of doses of vaccines administered to $X_S$.
+* $\epsilon(inf)_{strain-{dose\_no}}$ : Vaccine efficacy for a particular $strain$ of contagion carried by $X_I$ with respect to the $dose_no$, i.e. no. of doses of vaccines administered to $X_S$.
 
 Simplifying the names and putting it all together:
 $$
-Pr(X_I \ \underrightarrow{infects}\  X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})
+Pr(X_I \ \underrightarrow{infects} \  X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})
 $$
 
 This is implemented at line no. **356**
@@ -310,7 +310,7 @@ CONST_MAX_CHANCE <- 0.00300
 
 Please note the base infection chance may be parameterised, with resepect to contact event metadata of $location\_type$ and $activity\_type$.
 
-On the next section we review the data structures housing $\mu_{strain}$, $\epsilon(inf)_{strain_{dose\_no}}$ ```active_voc_mat``` for different strains of contagion and the ```infection_hist_mat``` keeping track of simulation run specific infection meta-data.   
+On the next section we review the data structures housing $\mu_{strain}$, $\epsilon(inf)_{strain-{dose\_no}}$ ```active_voc_mat``` for different strains of contagion and the ```infection_hist_mat``` keeping track of simulation run specific infection meta-data.   
 &nbsp;
 
 [^1]: Csardi G, Nepusz T (2006). “The igraph software package for complex network research.” InterJournal, Complex Systems, 1695. https://igraph.org
