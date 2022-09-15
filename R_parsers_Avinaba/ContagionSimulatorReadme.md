@@ -126,7 +126,7 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
 &nbsp;
 
 ### Individual state management
-Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$ no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows} $$
+Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows}$$
 
 This is initalised at line no. **2618**.
 ```R
