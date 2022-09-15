@@ -18,6 +18,7 @@ Accommodate individual level network based stochastic contagion simulation over 
   * [Infection event](#infection-event)
 * [Variants of Concern](#variants-of-concern)
   * [Infection History](#infection-history)
+* [Vaccination status](#vaccination-status)
   &nbsp;
   &nbsp;
 
@@ -362,3 +363,68 @@ Each row corresponds to a numeric agent id and is looked up along with ```active
 Please note, during simulation this also provides a efficient mechanism for computing non-Markovian transitions based on age of infection. And post-simulation this may be utilised for visualising infection trees.
 &nbsp;
 &nbsp;
+
+## Vaccination status
+As vaccination and the lack thereof effects the overall proportions and mean infectious and hospitalisation periods, they may be encoded as duplicated contagion compartment model with different parameters as advised by Dr. Seahra.
+
+For example, if we were to introduce vaccination to the classic SIR model, the resulting model may look like the following, side by side:
+
+```mermaid {theme="hand"}
+  flowchart TB
+
+
+  sus00[Susceptible with no vaccine]
+  inf00[Infected with no vaccine]
+  rem00[Removed with no vaccine]
+
+  sus01[Susceptible with 1 dose]
+  inf01[Infected with 1 dose]
+  rem01[Removed with 1 dose]
+
+  subgraph SIR_w_vaccine [SIR with single dose of vaccine]
+  direction LR
+    subgraph Nested_Regular_SIR[Nested Regular SIR]
+    direction TB
+      sus00 -- infection --> inf00 -- removal --> rem00
+    end
+    subgraph Augmented_SIR[Nested Augmented SIR]
+    direction TB
+      sus01 -- infection' --> inf01 -- removal' --> rem01
+    end
+  end
+  Nested_Regular_SIR -- vaccination --> Augmented_SIR
+
+  sus[Susceptible]
+  inf[Infected]
+  rem[Removed]
+
+  subgraph Regular_SIR [Regular SIR]
+  direction TB
+  sus -- infection --> inf -- removal --> rem
+  end
+```
+
+The rate at which a susceptible individual may be vaccinated, could be defined as a constant as part of the disease model graph for the simplest implementation.
+
+However, this simulator reads province wide vaccine disbursal data and and sets vaccination chance proportional to the total population of the province from line no. **2889-2959**
+
+This is maintained in a table ```vaccination_perday_mat```, with the structure:
+day_since_jan42021 | dose1 | dose2
+--- | --- | --- 
+
+Having defined the compartments for susceptibles for each vaccination dose, the required initial simulation condition is initialised for each run, starting at line no. :  **318**
+
+
+```R
+# Caliberation mode (for models without vaccines)
+CONST_y0 = 1.0
+CONST_y1 = 0.0
+CONST_y2 = 0.0
+CONST_y3 = 0.0
+```
+
+[^1]: Csardi G, Nepusz T (2006). “The igraph software package for complex network research.” InterJournal, Complex Systems, 1695. https://igraph.org
+
+[^2]: Markov chain, A Markov chain or Markov process is a stochastic model describing a sequence of possible events... https://en.wikipedia.org/wiki/Markov_chain
+
+[^3]: SARS-CoV-2 variants: National definitions, designations and public health actions - Government of Canada https://www.canada.ca/en/public-health/services/diseases/2019-novel-coronavirus-infection/health-professionals/testing-diagnosing-case-reporting/sars-cov-2-variants-national-definitions-classifications-public-health-actions.html#a3
