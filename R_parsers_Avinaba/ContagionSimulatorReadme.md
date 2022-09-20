@@ -19,6 +19,10 @@ Accommodate individual level network based stochastic contagion simulation over 
 * [Variants of Concern](#variants-of-concern)
   * [Infection History](#infection-history)
 * [Vaccination status](#vaccination-status)
+* [Simulating diagnostic tests](#simulating-diagnostic-tests)
+  * [Voluntary testing](#voluntary-testing)
+  * [Diagnostic test parameters](#diagnostic-test-parameters)
+  * [Test scheduler](#test-scheduler)
   &nbsp;
   &nbsp;
 
@@ -126,7 +130,7 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
 &nbsp;
 
 ### Individual state management
-Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows}$$
+Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$ no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows} $$
 
 This is initalised at line no. **2618**.
 ```R
@@ -410,7 +414,7 @@ However, this simulator reads province wide vaccine disbursal data and and sets 
 
 This is maintained in a table ```vaccination_perday_mat```, with the structure:
 day_since_jan42021 | dose1 | dose2
---- | --- | --- 
+--- | --- | ---
 
 Having defined the compartments for susceptibles for each vaccination dose, the required initial simulation condition is initialised for each run, starting at line no. :  **318**
 
@@ -422,9 +426,94 @@ CONST_y1 = 0.0
 CONST_y2 = 0.0
 CONST_y3 = 0.0
 ```
+&nbsp;
+&nbsp;
+
+## Simulating diagnostic tests
+
+So far, the contagion models and their discussed extensions assumes there is full knowledge of the population who are infected. Which may be true for contagions manifesting their effects with apparent symptoms. However, for contagions like SARS-CoV-2 a significant portion of the population may show mild or no symptom at all and there are further complications arising with overlapping symptoms associated with the common flu.
+Therefore, in these situations, diagnostic tests designed specifically for the contagion in question, are the tools utilised by health authorities to track the (contagion) spread.
+
+The simulator takes a time-deterministic approach to testing, with the following flow for any agent requesting a test:
+
+```mermaid {theme="hand"}
+  flowchart TB
+
+  00req[Request for Test]
+  01_00wait_iso[Wait for result while isolating]
+  01_01wait[Wait for result while participating]
+  02_00pos[Receive positive result]
+  02_01neg[Receive negative result]
+
+  00req -- testing delay --> 01_01wait
+  00req -- testing delay --> 01_00wait_iso
+
+  01_01wait ----> 02_00pos
+  01_01wait ----> 02_01neg
+
+  01_00wait_iso ----> 02_00pos
+  01_00wait_iso ----> 02_01neg
+
+
+```
+
+The testing delay is dependent on real world factors of availability, access and scheduling.
+
+To simulate real-world diagnostic tests, their efficacy and availability and test taking behaviour, the simulator has the following parameters and data structures.
+&nbsp;
+
+### Voluntary testing
+At line no. **41**, are voluntary daily test requesting chance for two groups of population are as follows:
+```R
+CONST_SYMPTOMATIC_INFECTIOUS_TEST_CHANCE = 0.05 # Voluntary testing by symptomatic infectious population
+CONST_ASYMPTOMATIC_TEST_CHANCE = 0.001 # 0.02 # Voluntary testing by susceptible and asymptomatic infectious population
+```
+As the name suggests ```CONST_SYMPTOMATIC_INFECTIOUS_TEST_CHANCE```, the compartment(s) of population who are infected and symptomatic would seek diagnostic testing with a probability of ```0.05```.
+
+Any other compartment with population who are not showing any symptom, irrespective of carrying the contagion may seek test with a probability of ```CONST_ASYMPTOMATIC_TEST_CHANCE``` set at ```0.001```
+&nbsp;
+
+### Diagnostic test parameters
+Based on concurrent research[^4], diagnostic tests of different types and brands offer different sensitivity (True Positive rate) and specificity (True Negative rate) for determining positive infection status. Furthermore these parameters are also dependent on whether the individual is symptomatic or not, or more generally speaking dependent on the age of infection.
+
+This simulator is utilising the mean parameters for rapid-antigen and molecular tests with the following data structure to ensure ease of extension, initalised at line no. **192-244** as ```covid_test_df```
+
+Type | Result delay | Symptomatic TPR | Symptomatic TNR | Symptomatic FNR | Symptomatic FPR | Asymptomatic TPR | Asymptomatic TNR | Asymptomatic FNR  |  Asymptomatic FPR | Max test capacity
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+
+The daily test capacity parameters may be set at line no. **38-39**
+```R
+MAX_COVID_TEST_CAPACITY_ANTIGEN_TYPE = 5000
+MAX_COVID_TEST_CAPACITY_RAPID_MOLECULAR_TYPE = 200
+```
+
+A subset of the above, is initialised as on line no. **3116**
+```R
+available_covid_tests_df <- filter(covid_test_df, `Max test capacity` > 0)
+```
+&nbsp;
+
+### Test scheduler
+A matrix of dimension $4_{columns} \times no \textunderscore of \textunderscore indviduals$ named ```test_schedule_mat``` is initialised at line no. **3111**. This decouples the compartment model transitions from the testing system and making it flexible enough for even extreme scenarios like cascading failure of testing infrastructure due to unavailability of diagnostic test from roll-over demands.
+
+It is re-intialised for every simulation run and has the following structure:
+$\cdot$ | test type | test scheduled on | result day | result
+--- | --- | --- | --- | ---
+**row 1** | | | | | |
+**row 2** | | | | | |
+**...** | | | | | |
+**row N** | | | | | |  
+
+Thus, ```available_covid_tests_df``` and ```test_schedule_mat``` works in concert to schedule tests for any simulation day with ```test scheduled on``` and its corresponding testing delay with ```result day``` for any given agent id as the row number.
+
+The test result computation on any given simulation day, filters the entries based on ```result day``` and row numbers and populates the ```result```  field with respect to the parameters of the ```test type```.   
+
+
 
 [^1]: Csardi G, Nepusz T (2006). “The igraph software package for complex network research.” InterJournal, Complex Systems, 1695. https://igraph.org
 
 [^2]: Markov chain, A Markov chain or Markov process is a stochastic model describing a sequence of possible events... https://en.wikipedia.org/wiki/Markov_chain
 
 [^3]: SARS-CoV-2 variants: National definitions, designations and public health actions - Government of Canada https://www.canada.ca/en/public-health/services/diseases/2019-novel-coronavirus-infection/health-professionals/testing-diagnosing-case-reporting/sars-cov-2-variants-national-definitions-classifications-public-health-actions.html#a3
+
+[^4]: Rapid, point‐of‐care antigen and molecular‐based tests for diagnosis of SARS‐CoV‐2 infection. Cochrane Database of Systematic Reviews 2021, https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD013705.pub2/full
