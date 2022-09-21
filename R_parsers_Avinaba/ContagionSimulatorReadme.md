@@ -23,6 +23,8 @@ Accommodate individual level network based stochastic contagion simulation over 
   * [Voluntary testing](#voluntary-testing)
   * [Diagnostic test parameters](#diagnostic-test-parameters)
   * [Test scheduler](#test-scheduler)
+* [Contact Tracing](#contact-tracing)
+  * [Flow of gathering contacts](#flow-of-gathering-contacts)
   &nbsp;
   &nbsp;
 
@@ -507,7 +509,92 @@ $\cdot$ | test type | test scheduled on | result day | result
 Thus, ```available_covid_tests_df``` and ```test_schedule_mat``` works in concert to schedule tests for any simulation day with ```test scheduled on``` and its corresponding testing delay with ```result day``` for any given agent id as the row number.
 
 The test result computation on any given simulation day, filters the entries based on ```result day``` and row numbers and populates the ```result```  field with respect to the parameters of the ```test type```.   
+&nbsp;
+&nbsp;
 
+## Contact tracing
+This simulator borrows the its contact tracing model from the paper titled "Time is of the essence: impact of delays on effectiveness of contact tracing for COVID-19, a modelling study" (2020) by the authors Mirjam E. Kretzschmar, et al [^5].
+
+One may set the contact tracing strategy and high level parameters at line no. **56-61**
+```R
+CONST_ENABLE_CONTACT_TRACING = TRUE
+CONTACT_TRACING_STRATEGY_NAMES <- c( "Conventional tracing", "Mobile app based tracing" )
+CONST_CHOSEN_CONTACT_TRACING_STRATEGY <- "Mobile app based tracing"
+CONST_CHOSEN_CLOSE_CONTACT_NUMBER <- 4 # Magic number
+CONST_CHOSEN_CASUAL_CONTACT_NUMBER <- 9 # Magic number
+CONST_SAMEDAY_TRACING_LEVEL <- 1
+```
+Here the maximum number of close contacts and casual contacts are set as 4 and 9 on the basis of similar considerations of the source paper [^5]. Our implementation, classifies all contacts with greater than 4 hours of contact events as "close" and the rest as "casual". The top 4 close contacts and a random sample of 9 casual contacts are chosen respectively. And further down-sampled with the coverage fraction as defined for the specific strategy.
+
+The behaviour of the tracing strategies are based on the following parameters defined at line no. **300-313**
+
+Let us take a closer look at the "Conventional tracing" strategy
+```R
+# Conventional Contact Tracing parameters
+CONST_CONTACT_TRACING_DELAY = 3 # "If a positive result is observed for simulation day D, request test on D + 3, for all traced contacts for range [D-6, D]"
+CONST_CONTACT_TRACING_COVERAGE_CLOSE_CONTACTS = 0.8 # "Randomly sample 80% of the traced close contacts for testing"
+CONST_CONTACT_TRACING_COVERAGE_CASUAL_CONTACTS = 0.5 # "Randomly sample 50% of the traced casual contacts for testing"
+CONST_CONTACT_TRACING_TIME_WINDOW = 7 # "Detect and discern close and casual contacts from the day of receiving a positive result + tracing delay"
+```
+Here the tracing delay is placeholder for the operational delay in caused by communication with the individual with a positive result and the contact tracing system. The coverage fraction accounts for the errors inherent in tracing system. And finally the tracing time window defines till how far back in time the contacts of this individual are considered for tracing.
+
+This process is abstracted into a function called ```contactTrace <- function( traced_agent_id, tracing_day_index )``` at line no. **3175-3371**, which utilises "contact_matrices" or "neighbour_lists" and returns a list of agent ids.
+
+Please note, a helper function ```batchContactTrace <- function(all_positive_test_result_ids, day_index)``` is intialised at line no. **3379-3418** for
+&nbsp;
+
+### Flow of gathering contacts
+
+```mermaid {theme ="hand"}
+flowchart TB
+  
+  agent_id[Agent id]
+  tracing_end_day[Trace end day]
+  tracing_beg_day[Trace start day]
+  contact_matrices[Contact Matrices]
+  all_contact[All traced contacts]
+  all_close_contact[All Close contacts]
+  all_casual_contacts[All Casual contacts]
+  chosen_close_contact[Top 4 Close contacts]
+  chosen_casual_contacts[Random 9 Casual contacts]
+  contact_separator{is contact time > 4 hour}
+
+  sampled_close_contacts[Sampled Close contacts]
+  sampled_casual_contacts[Sampled Casual contacts]
+
+  subgraph INPUT
+    agent_id 
+    tracing_end_day
+  end
+
+  subgraph Total_trace [Total Tracing window]
+    tracing_end_day
+    tracing_beg_day
+    tracing_end_day -- CONST_CONTACT_TRACING_TIME_WINDOW --- tracing_beg_day
+  end
+    
+  agent_id --> contact_matrices
+  Total_trace --> contact_matrices
+
+  contact_matrices --> all_contact
+
+  all_contact --> contact_separator
+
+  contact_separator -- Yes --> all_close_contact
+  contact_separator -- No --> all_casual_contacts
+
+  all_close_contact -- Select contacts with highest shared time --> chosen_close_contact
+  all_casual_contacts -- Randomly sample --> chosen_casual_contacts
+  
+  chosen_close_contact -- Downsample by *TRACING_COVERAGE --> sampled_close_contacts
+  chosen_casual_contacts -- Downsample by *TRACING_COVERAGE --> sampled_casual_contacts
+
+  subgraph OUTPUT
+    sampled_close_contacts
+    sampled_casual_contacts
+  end
+
+```
 
 
 [^1]: Csardi G, Nepusz T (2006). “The igraph software package for complex network research.” InterJournal, Complex Systems, 1695. https://igraph.org
@@ -517,3 +604,5 @@ The test result computation on any given simulation day, filters the entries bas
 [^3]: SARS-CoV-2 variants: National definitions, designations and public health actions - Government of Canada https://www.canada.ca/en/public-health/services/diseases/2019-novel-coronavirus-infection/health-professionals/testing-diagnosing-case-reporting/sars-cov-2-variants-national-definitions-classifications-public-health-actions.html#a3
 
 [^4]: Rapid, point‐of‐care antigen and molecular‐based tests for diagnosis of SARS‐CoV‐2 infection. Cochrane Database of Systematic Reviews 2021, https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD013705.pub2/full
+
+[^5]: Mirjam E Kretzschmar, Ganna Rozhnova, Martin C J Bootsma, Michiel van Boven, Janneke H H M van de Wijgert, Marc J M Bonten, Impact of delays on effectiveness of contact tracing strategies for COVID-19: a modelling study,The Lancet Public Health, Volume 5, Issue 8, 2020, Pages e452-e459, ISSN 2468-2667, https://doi.org/10.1016/S2468-2667(20)30157-2.
