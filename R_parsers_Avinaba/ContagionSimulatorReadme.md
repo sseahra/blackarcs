@@ -784,13 +784,17 @@ Test requests and result requests are subsets of the test scheduler ```test_sche
 
     same_day -- Yes --> sameday_traced_test
 
-    contact_trace_again[Contact trace]
+    traced_positive_res[Positive results]
 
-    sameday_traced_test --filter positives--> contact_trace_again
+    sameday_traced_test --filter positives--> traced_positive_res
+
+    next_level_traced_contacts[Traced contacts]
+
+    traced_positive_res --contact trace--> next_level_traced_contacts
 
     maximum_depth{maximum depth?}
 
-    contact_trace_again ----> maximum_depth
+    next_level_traced_contacts ----> maximum_depth
 
     maximum_depth -- Yes --> delayed_req
 
