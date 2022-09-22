@@ -25,6 +25,13 @@ Accommodate individual level network based stochastic contagion simulation over 
   * [Test scheduler](#test-scheduler)
 * [Contact Tracing](#contact-tracing)
   * [Flow of gathering contacts](#flow-of-gathering-contacts)
+* [Simulation loops](#simulation-loops)
+  * [SIR simulation loop](#sir-simulation-loop)
+  * [Augmented simulation loop](#augmented-simulation-loop)
+* [Data Flow diagrams](#data-flow-diagrams)
+  * [Infection probability](#infection-probability)
+  * [Testing and Contact Tracing](#testing-and-contact-tracing)
+
   &nbsp;
   &nbsp;
 
@@ -547,51 +554,248 @@ Please note, a helper function ```batchContactTrace <- function(all_positive_tes
 
 ```mermaid {theme ="hand"}
 flowchart TB
-  
-  agent_id[Agent id]
-  tracing_end_day[Trace end day]
-  tracing_beg_day[Trace start day]
+
+agent_id[Agent id]
+tracing_end_day[Trace end day]
+tracing_beg_day[Trace start day]
+contact_matrices[Contact Matrices]
+all_contact[All traced contacts]
+all_close_contact[All Close contacts]
+all_casual_contacts[All Casual contacts]
+chosen_close_contact[Top 4 Close contacts]
+chosen_casual_contacts[Random 9 Casual contacts]
+contact_separator{is contact time > 4 hour}
+
+sampled_close_contacts[Sampled Close contacts]
+sampled_casual_contacts[Sampled Casual contacts]
+
+subgraph INPUT
+  agent_id
+  tracing_end_day
+end
+
+subgraph Total_trace [Total Tracing window]
+  tracing_end_day
+  tracing_beg_day
+  tracing_end_day -- CONST_CONTACT_TRACING_TIME_WINDOW --- tracing_beg_day
+end
+
+agent_id --> contact_matrices
+Total_trace --> contact_matrices
+
+contact_matrices --> all_contact
+
+all_contact --> contact_separator
+
+contact_separator -- Yes --> all_close_contact
+contact_separator -- No --> all_casual_contacts
+
+all_close_contact -- Select contacts with highest shared time --> chosen_close_contact
+all_casual_contacts -- Randomly sample --> chosen_casual_contacts
+
+chosen_close_contact -- Downsample by *TRACING_COVERAGE --> sampled_close_contacts
+chosen_casual_contacts -- Downsample by *TRACING_COVERAGE --> sampled_casual_contacts
+
+subgraph OUTPUT
+  sampled_close_contacts
+  sampled_casual_contacts
+end
+
+```
+&nbsp;
+&nbsp;
+
+
+
+## Simulation loops
+
+The complexity of the compartmental model and the additional state management levied by vaccination and testing, directly reflects on the simulation loop.
+
+At its simplest, for SIR, it may be described as follows:
+### SIR simulation loop
+* 0: Set up initial infectious population and mark the end of day 1
+* 1: From day 2 till end of simulation
+  * 1.1: Iterate on the list of infectious from previous day
+    * 1.1.1: **Propagation step**: "Do they infect any of the susceptible from previous day?"
+  * 1.2: **Evolution step**: "Transition any non-susceptible from previous day evolve to their next state"
+  * 1.3: This concludes the final states for this day, record and repeat
+
+&nbsp;
+&nbsp;
+
+Now, for all the augmentation on the compartment model the loop modifies to the following:
+### Augmented simulation loop
+* 0: Set up initial infectious and vaccinated proportion and mark the beginning of day 1
+* 1: From day 2 till end of simulation
+  * 1.1: Iterate on the list of susceptibe from previous day
+    * 1.1.1: **Vaccination step**: "Did anyone get vaccinated yesterday?"
+  * 1.2: Iterate on the list of test-seekers from previous day (excluding the newly vaccinated)
+    * 1.2.1: **Voluntary Test Request step**: "Did anyone request test yesterday?"
+  * 1.3: Iterate on the result-seekers from previous day (including same day test seekers)
+    * 1.3.1: **Test Result Generation step**: "Did anyone receive test result yesterday?"
+    * 1.3.2: Iterate over agents receiving *positive test result*
+      * 1.3.2.1: **Contact Tracing step**: Gather all the traced contacts of positive result receiving agent
+      * 1.3.2.2: **If**: there is a contact tracing delay of more than a day, schedule tests
+      * 1.3.2.3: **Else**: **Same day traced-testing step**: Generate test result for all the traced contacts except for the ones who already requested and received test result yesterday.
+      * 1.3.2.4: Contact trace the positive results from the previous step.
+      * 1.3.2.5: **If**: maximum same-day-tracing-depth has not been reached exclude the ones who already requested and received test result yesterday and repeat from step 1.3.2.3
+      * 1.3.2.6: **Else**: Schedule testing for contact traced agents from step 1.3.2.4 for next day (with or without isolating these agents from propagation).
+  * 1.4: Iterate over remaining infectious agents from previous day
+    * 1.4.1: **Propagation step**: "Do they infect any of the susceptible from previous day?"
+  * 1.5: **Evolution step**: "Transition any non-susceptible from previous day evolve to their next state"
+  * 1.6: This concludes the contagion propagation for this day and finalises the states for the previous day, record and repeat
+
+&nbsp;
+&nbsp;
+
+## Data Flow diagrams
+Putting it all together, the data structures and their associated functions as flows
+
+### Infection probability
+Calculating the probability of a single infection event for the most complex case this simulator may support. (Please note, activity type support is a work in progress).
+
+```mermaid {theme ="hand"}
+  flowchart TB
+
+
+
   contact_matrices[Contact Matrices]
-  all_contact[All traced contacts]
-  all_close_contact[All Close contacts]
-  all_casual_contacts[All Casual contacts]
-  chosen_close_contact[Top 4 Close contacts]
-  chosen_casual_contacts[Random 9 Casual contacts]
-  contact_separator{is contact time > 4 hour}
+  neighbour_list[Neighbour lists]
 
-  sampled_close_contacts[Sampled Close contacts]
-  sampled_casual_contacts[Sampled Casual contacts]
+  infector_id[Infector agent id]
+  susceptible_id[Susceptible agent id]
+  contact_event_id[Contact event id]
 
-  subgraph INPUT
-    agent_id 
-    tracing_end_day
+  active_voc_mat[Active variant table]
+  infection_hist_mat[Infection history]
+
+  state[Agent State matrix]
+
+  contact_matrices -- pre-process --> neighbour_list
+
+  subgraph INPUT[INPUT]
+  direction TB
+    infector_id
+    susceptible_id
+    contact_event_id
   end
 
-  subgraph Total_trace [Total Tracing window]
-    tracing_end_day
-    tracing_beg_day
-    tracing_end_day -- CONST_CONTACT_TRACING_TIME_WINDOW --- tracing_beg_day
+
+  infector_id ----> neighbour_list
+  susceptible_id ----> neighbour_list
+  contact_event_id ---> neighbour_list
+
+  neighbour_list ----> contact_time
+  neighbour_list ----> contact_venue
+  neighbour_list ----> contact_activity
+
+  infector_id ----> infection_hist_mat
+  infection_hist_mat ----> active_voc_mat
+  active_voc_mat ----> relative_infectivity
+
+  susceptible_id ----> state
+  state ----> vaccine_efficacy
+  active_voc_mat ----> vaccine_efficacy
+
+  subgraph Infection_event [Calculate infection probability]
+  direction TB
+    amp[Base Amplitude]
+    t_ramp[Ramp up time]
+    contact_time[Contact time]
+    contact_venue[Venue]
+    contact_activity[Activity]
+    relative_infectivity[Relative infectivity of variant]
+    vaccine_efficacy[Vaccine efficacy for this variant]
   end
-    
-  agent_id --> contact_matrices
-  Total_trace --> contact_matrices
+```
+&nbsp;
+&nbsp;
 
-  contact_matrices --> all_contact
+### Testing and Contact Tracing
+Test requests and result requests are subsets of the test scheduler ```test_schedule_mat```, works with ```available_covid_tests_df``` and ```STATE``` to determine the test results for any given day.
 
-  all_contact --> contact_separator
+```mermaid {theme ="hand"}
+  flowchart TB
 
-  contact_separator -- Yes --> all_close_contact
-  contact_separator -- No --> all_casual_contacts
+  test_req[Test Requests]
 
-  all_close_contact -- Select contacts with highest shared time --> chosen_close_contact
-  all_casual_contacts -- Randomly sample --> chosen_casual_contacts
-  
-  chosen_close_contact -- Downsample by *TRACING_COVERAGE --> sampled_close_contacts
-  chosen_casual_contacts -- Downsample by *TRACING_COVERAGE --> sampled_casual_contacts
+  day_index[Simulation Day]
 
-  subgraph OUTPUT
-    sampled_close_contacts
-    sampled_casual_contacts
+  test_schedule_mat[Test scheduler]
+  covid_test_df[Test parameters and availability]
+
+  subgraph req[When scheduling test]
+  direction LR
+    test_req
+  end
+
+  subgraph get_result[When generating result]
+  direction LR
+    day_index
+  end
+
+  test_req -- Voluntary or by contact tracing --> test_schedule_mat
+
+  day_index --> test_schedule_mat
+
+  subgraph result_seekers[List of Result seekers]
+  direction TB
+    agent_id[Agent id]
+    test_type[Test type]
+  end
+
+  test_schedule_mat -- filtered by simulation day --> result_seekers
+
+  test_type ----> covid_test_df
+
+  subgraph TestResultGeneration[Test Result Generation]
+    subgraph OUTPUT[Test results]
+    direction TB
+      agent_id_res[Agent id]
+      test_result[Test results]
+    end
+
+    state[Agent State matrix]
+
+    agent_id ----> agent_id_res
+    agent_id ----> state
+    state -- Symptomatic/Asymptomatic --> covid_test_df
+    covid_test_df -- TPR/FPR --> test_result
+  end
+
+  test_result -- filter positives --> positive_res
+
+  subgraph Contact_tracing[Contact Tracing]
+  direction TB
+    positive_res[Positive test results]
+    neighbours[Traced contacts]
+
+    positive_res -- contact trace --> neighbours
+
+    same_day{same day tracing?}
+
+    neighbours ----> same_day
+
+    delayed_req[Schedule delayed test request]
+
+    same_day -- No --> delayed_req
+
+    sameday_traced_test[Generate test result]
+
+    same_day -- Yes --> sameday_traced_test
+
+    contact_trace_again[Contact trace]
+
+    sameday_traced_test --filter positives--> contact_trace_again
+
+    maximum_depth{maximum depth?}
+
+    contact_trace_again ----> maximum_depth
+
+    maximum_depth -- Yes --> delayed_req
+
+    maximum_depth -- No --> sameday_traced_test
+
   end
 
 ```
