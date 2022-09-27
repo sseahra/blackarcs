@@ -81,7 +81,7 @@ For, SIR infection propagating transition is the S-I edge and for SLIR it is the
 
 In our simulator we have the option of both designing a compartment model from scratch or import it as an adjacency matrix.
 
-We utilise the R library igraph[^1] and initialise the list of disease model the simulator may account for and convert to its corresponding adjacency matrix, from line no. **670 - 2233** in ```Contagion_Simulator_vcalib13.R```:Individual state management
+We utilise the R library igraph[^1] and initialise the list of disease model the simulator may account for and convert to its corresponding adjacency matrix, from line no. **[705](https://github.com/sseahra/blackarcs/blob/aa1ceb0946fb17204c28896936545f2eb1518dc2/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L705) - [2308](https://github.com/sseahra/blackarcs/blob/aa1ceb0946fb17204c28896936545f2eb1518dc2/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2308)** in [```Contagion_Simulator_vcalib14.R```](https://github.com/sseahra/blackarcs/blob/main/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R) :Individual state management
 
 - Complex model from Dr. Seahra - line no. **684 - 1600**
 - SIR - line no. **1600 - 1704**
