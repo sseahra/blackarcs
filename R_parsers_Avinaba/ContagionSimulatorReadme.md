@@ -139,9 +139,9 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
 &nbsp;
 
 ### Individual state management
-Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$ no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows} $$
+Although there are more space-efficient approach to encode the state of each individual for each simulation step, this simulator uses a 2D-Matrix $State$ of dimensions: $$no \textunderscore of \textunderscore simulation \textunderscore steps_{columns} \times no \textunderscore of \textunderscore individuals_{rows}$$
 
-This is initalised at line no. **2618**.
+This is initalised at line no. **[2685](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2685)**.
 ```R
 STATE <- array(rep(NA, TOTAL_SIMULATED_PERSONS * TOTAL_SIMULATION_DAYS),
                dim = c(TOTAL_SIMULATED_PERSONS, TOTAL_SIMULATION_DAYS) )
@@ -164,13 +164,13 @@ t_m \in \mathbb{T}_{X,Y,i} = {t_1, t_2, ... t_m},\  if\ \  location\ based
 \end{cases}
 $$
 
-The parameter to choose from aggregated or location based contact matrices is at line no. **129**
+The parameter to choose from aggregated or location based contact matrices is at line no. **[160](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L160)**
 ```R
 CONST_CHOSEN_CONTACT_MATRIX_TYPE <- "Aggregated"
 # Note: this too is loosely implemented with manual string matching
 CONTACT_MATRIX_TYPE_NAMES <- c("Aggregated", "Location based")
 ```
-Also, the simulator needs a directory to read the pairwise list of contact times as CSVs parsed from Citisketch schedule jsons, to be specified at line no. **406**
+Also, the simulator needs a directory to read the pairwise list of contact times as CSVs parsed from Citisketch schedule jsons, to be specified at line no. **[441](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L441)**
 ```R
 # contact matrix (pairlist)
 # CONTACT_MATRIX_DIR <- 'schedules_Campbellton_Control_Jan_12_2022'
@@ -180,7 +180,7 @@ CONTACT_MATRIX_DIR <- 'SIR_calib_contact_matrix'
 
 ### Aggregated Contact Matrix
 Again, we encode this in a 2D-Matrix of dimension $no \textunderscore of \textunderscore individuals \times no \textunderscore of \textunderscore individuals$ from .
-This is intialised at line no. **2436 - 2520**
+This is intialised at line no. **[2527](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2527) - [2586](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2586)**
 ```R
 # Read contact matrix
 contact_matrix_as_pairlist <- read.table(CONTACT_MATRIX_AS_PAIRLIST_FILENAME, sep=",")
@@ -210,7 +210,7 @@ $\cdot$ | 1 | 2 | ... |  N
 
 ### Location based Contact Matrix
 This is interpreted as is, we keep this as a pairlist of dimension $no \textunderscore of \textunderscore columns \times no \textunderscore of \textunderscore contact \textunderscore events$ from
-This is intialised at line no. **2520 - 2594**
+This is intialised at line no. **[2587](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2587) - [2661](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2661)**
 
 
 
@@ -240,14 +240,14 @@ Therefore, as advised by Dr. Seahra, pre-processing the neighbours into constant
 Please note, the pre-processing step introduces a delay in simulation setup time, about 17 minutes (1023.4s) for pre-processing 30 location based contact matrices resulting in about reducing about 40 seconds from a 90 second simulation time of 210 days.  
 However, as most of experiments are batches of 100~200 simulation runs, of 210 days (time-steps) with an available pool of 30 contact matrices, the one-time-cost build cost is outweighed by speedup obtained for every run.
 
-For Aggregated interpretation, pre-processing is implemented at line **2501**
+For Aggregated interpretation, pre-processing is implemented at line **[2568](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2568)**
 ```R
 for(person_id in 1:TOTAL_SIMULATED_PERSONS){
   list_day_x_person_x_contact[[matrix_index]][[person_id]] <- which(contact_matrix[person_id, ] > 0)
 }
 ```
 
-For Location based interpretation, it is implemented at line **2568**
+For Location based interpretation, it is implemented at line **[2635](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2635)**
 ```R
 for(person_id in 1:TOTAL_SIMULATED_PERSONS){
   list_day_x_person_x_contact[[matrix_index]][[person_id]] <- contact_matrix_as_pairlist[which(contact_matrix_as_pairlist$person_id_1 == person_id), ]$person_id_2
@@ -262,7 +262,7 @@ Both are nested loops within an outer loop which iterates over the list of avail
 &nbsp;
 
 ### Iterating for multi-step simulation
-At present the simulator cycles through the available contact matrices in order when the simulation step exceeds the number of available matrices. This sequence is generated at line no. **3146-3161**
+At present the simulator cycles through the available contact matrices in order when the simulation step exceeds the number of available matrices. This sequence is generated at line no. **[3261](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3216)-[3231](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3231)**
 ```R
 getContactMatrixIndexForSimDay <- function(simulation_day_index){
   if( simulation_day_index <= 1 ){
@@ -284,8 +284,8 @@ contact_matrix_index_lookup_list <- c(NA, contact_matrix_index_lookup_list)
 
 This enables for swapping the (30 matrix) month long sequence for perhaps a shorter (7 matrix) weekday-weekend sequence or a longer (90 matrix) holiday season with pre-holiday and post-holiday month sequence with just changing the directory ```CONTACT_MATRIX_DIR```.
 
-**Errata: ```Contagion_Simulator_vcalib13.R``` has a bug, when utilising ```contact_matrix_index_lookup_list``` the simulation loop incorrectly starts lookup with ```day_index == 1``` for the first day.
-This exists on line no. *6353, 6356, 6421, 6632, 6635, 6640, 6664* and ill be corrected in the next release.**
+~~**Errata: ```Contagion_Simulator_vcalib13.R``` has a bug, when utilising ```contact_matrix_index_lookup_list``` the simulation loop incorrectly starts lookup with ```day_index == 1``` for the first day.
+This exists on line no. *6353, 6356, 6421, 6632, 6635, 6640, 6664* and ill be corrected in the next release.**~~
 
 Please note, it is a minor bug, effectively reducing the simulation time by 1 time step for most cases.
 &nbsp;
@@ -295,9 +295,10 @@ Please note, it is a minor bug, effectively reducing the simulation time by 1 ti
 To ascertain new infections for simulation step $i$, iterating over infectious individuals $X \in I_{i-1}$ and their susceptible neighbours $susceptible \textunderscore neighbour(X) = neighbour(X) \cap S_{i-1}$, for simulation step $i -1$ provides the highest simulation speed.
 Especially, once any of susceptible individual has been infected by infectious individual $X_p \in I_{i-1} = {X_1, X_2, ... X_k}$, they may be removed from the overall set of Susceptibles $S_{i-1}$.
 And consequently need not be considered for computing possible infection from $X_q \in I_{i - 1}, q \neq p$.
-This is implemented with a for loop, at line no.: **6347-6895**
+This is implemented with a for loop, at line no.: **[6890](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L6890)-[7438](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L7438)**
 
-There is an alternate section that instead, iterates over set of susceptibles and their infected neighbours with a switching parameter based on count of infectious individuals, but it is not-maintained for ```Contagion_Simulator_vcalib13.R```. We plan to patch it in a subsequent release.
+There is an alternate section that instead, iterates over set of susceptibles and their infected neighbours with a switching parameter based on count of infectious individuals, ~~but it is not-maintained for ```Contagion_Simulator_vcalib13.R```. We plan to patch it in a subsequent release.~~
+at line no. : **[4891](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L4891) - [5524](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L5524)**
 &nbsp;
 
 ### Infection event
@@ -310,13 +311,13 @@ A single infection event for an infected individual $X_I \in I$ to infect $X_S \
 Simplifying the names and putting it all together:
 $$Pr(X_I\ \  \underrightarrow{infects}\ \  X_S) = (1 - \epsilon)  \mu  A  \tanh(\frac{t}{t_{ramp-up}})$$
 
-This is implemented at line no. **356**
+This is implemented at line no. **[391](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L391)**
 ```R
 # Infection probability w.r.t infectivity of the variant, vaccination status of potentially infected and contact time
 getInfection_probability_w_variant_w_vaccine <- function(vaccine_odds, relative_infectivity, contact_time)
 ```
 
-The base infection chance is one of the primary parameter of configuration ```CONST_MAX_CHANCE``` and a series of experimental values are listed starting from line no. : **143**
+The base infection chance is one of the primary parameter of configuration ```CONST_MAX_CHANCE``` and a series of experimental values are listed starting from line no. : **[175](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L175)**
 ```R
 # Amplitude of infection      |   For Aggregated            |   For Location wise
 # CONST_MAX_CHANCE <- 0.00100 # ~ 29.74% outbreaks - 500 runs | ~ 25.2% outbreaks - 500 runs
@@ -336,7 +337,7 @@ On the next section we review the data structures housing $\mu_{strain}$, $\epsi
 As the name suggests these are strains of a contagion the agencies responsible for public health monitor. In context to SARS-CoV-2, the Government of Canada maintains their Variants of Concern (VOC) and Variants of Interest(VOI) definition on their website[^3].
 
 
-This simulator is fed a subset of this data along with $\mu_{strain}$, $\epsilon(inf)_{strain-{dose_n}}$ in a dataframe name ```voc_df```, intialised on line no. : **453-571**
+This simulator is fed a subset of this data along with $\mu_{strain}$, $\epsilon(inf)_{strain-{dose_n}}$ in a dataframe name ```voc_df```, intialised on line no. : **[486](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L486)-[605](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L605)**
 
 It has the following structure:
 
@@ -345,7 +346,7 @@ WHO Label | variant | Relative infectivity | Vaccine dose 1 efficacy | Vaccine d
 
 Here "variant" is a re-label of "Parent lineage" as defined in the website[^3]
 
-The proportion of variants to intialise as part of the initial condition for a simulation scenario, i.e first day infection population is defined at line no. **588-630**
+The proportion of variants to intialise as part of the initial condition for a simulation scenario, i.e first day infection population is defined at line no. **[641](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L641) -[663](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L663)**
 
 For example, a diagnostic scenario would be to initalise all the available VOCs with equal proportions and track their propagation:
 ```R
@@ -356,7 +357,7 @@ voc_df <- voc_df %>% mutate_cond(`WHO label` == "Alpha" & `variant` == "B.1.1.7"
 voc_df <- voc_df %>% mutate_cond(`WHO label` == "Delta" & `variant` == "B.1.617.2", 'Proportion' = 20)
 ```
 
-Before, beginning a simulation a subset of ```voc_df``` of proportions > 0 is initalised at line no. **2729** as ```active_voc_mat```
+Before, beginning a simulation a subset of ```voc_df``` of proportions > 0 is initalised at line no. **[2796](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2796)** as ```active_voc_mat```
 ```R
 active_voc_mat <- as.matrix.data.frame(filter(voc_df, Proportion > 0))
 ```
@@ -419,13 +420,13 @@ For example, if we were to introduce vaccination to the classic SIR model, the r
 
 The rate at which a susceptible individual may be vaccinated, could be defined as a constant as part of the disease model graph for the simplest implementation.
 
-However, this simulator reads province wide vaccine disbursal data and and sets vaccination chance proportional to the total population of the province from line no. **2889-2959**
+However, this simulator reads province wide vaccine disbursal data and and sets vaccination chance proportional to the total population of the province from line no. **[2954](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2954)-[3023](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3023)**
 
 This is maintained in a table ```vaccination_perday_mat```, with the structure:
 day_since_jan42021 | dose1 | dose2
 --- | --- | ---
 
-Having defined the compartments for susceptibles for each vaccination dose, the required initial simulation condition is initialised for each run, starting at line no. :  **318**
+Having defined the compartments for susceptibles for each vaccination dose, the required initial simulation condition is initialised for each run, starting at line no. :  **[341](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L341)**
 
 
 ```R
@@ -472,7 +473,7 @@ To simulate real-world diagnostic tests, their efficacy and availability and tes
 &nbsp;
 
 ### Voluntary testing
-At line no. **41**, are voluntary daily test requesting chance for two groups of population are as follows:
+At line no. **[43](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L43)**, are voluntary daily test requesting chance for two groups of population are as follows:
 ```R
 CONST_SYMPTOMATIC_INFECTIOUS_TEST_CHANCE = 0.05 # Voluntary testing by symptomatic infectious population
 CONST_ASYMPTOMATIC_TEST_CHANCE = 0.001 # 0.02 # Voluntary testing by susceptible and asymptomatic infectious population
@@ -485,12 +486,12 @@ Any other compartment with population who are not showing any symptom, irrespect
 ### Diagnostic test parameters
 Based on concurrent research[^4], diagnostic tests of different types and brands offer different sensitivity (True Positive rate) and specificity (True Negative rate) for determining positive infection status. Furthermore these parameters are also dependent on whether the individual is symptomatic or not, or more generally speaking dependent on the age of infection.
 
-This simulator is utilising the mean parameters for rapid-antigen and molecular tests with the following data structure to ensure ease of extension, initalised at line no. **192-244** as ```covid_test_df```
+This simulator is utilising the mean parameters for rapid-antigen and molecular tests with the following data structure to ensure ease of extension, initalised at line no. **[217](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L217)-[269](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L269)** as ```covid_test_df```
 
 Type | Result delay | Symptomatic TPR | Symptomatic TNR | Symptomatic FNR | Symptomatic FPR | Asymptomatic TPR | Asymptomatic TNR | Asymptomatic FNR  |  Asymptomatic FPR | Max test capacity
 --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
 
-The daily test capacity parameters may be set at line no. **38-39**
+The daily test capacity parameters may be set at line no. **[38](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L38)-[39](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L39)**
 ```R
 MAX_COVID_TEST_CAPACITY_ANTIGEN_TYPE = 5000
 MAX_COVID_TEST_CAPACITY_RAPID_MOLECULAR_TYPE = 200
@@ -503,7 +504,7 @@ available_covid_tests_df <- filter(covid_test_df, `Max test capacity` > 0)
 &nbsp;
 
 ### Test scheduler
-A matrix of dimension $4_{columns} \times no \textunderscore of \textunderscore indviduals$ named ```test_schedule_mat``` is initialised at line no. **3111**. This decouples the compartment model transitions from the testing system and making it flexible enough for even extreme scenarios like cascading failure of testing infrastructure due to unavailability of diagnostic test from roll-over demands.
+A matrix of dimension $4_{columns} \times no \textunderscore of \textunderscore indviduals$ named ```test_schedule_mat``` is initialised at line no. **[3169](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3169)**. This decouples the compartment model transitions from the testing system and making it flexible enough for even extreme scenarios like cascading failure of testing infrastructure due to unavailability of diagnostic test from roll-over demands.
 
 It is re-intialised for every simulation run and has the following structure:
 $\cdot$ | test type | test scheduled on | result day | result
@@ -522,7 +523,7 @@ The test result computation on any given simulation day, filters the entries bas
 ## Contact tracing
 This simulator borrows the its contact tracing model from the paper titled "Time is of the essence: impact of delays on effectiveness of contact tracing for COVID-19, a modelling study" (2020) by the authors Mirjam E. Kretzschmar, et al [^5].
 
-One may set the contact tracing strategy and high level parameters at line no. **56-61**
+One may set the contact tracing strategy and high level parameters at line no. **[54](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L54)-[60](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L60)**
 ```R
 CONST_ENABLE_CONTACT_TRACING = TRUE
 CONTACT_TRACING_STRATEGY_NAMES <- c( "Conventional tracing", "Mobile app based tracing" )
@@ -533,7 +534,7 @@ CONST_SAMEDAY_TRACING_LEVEL <- 1
 ```
 Here the maximum number of close contacts and casual contacts are set as 4 and 9 on the basis of similar considerations of the source paper [^5]. Our implementation, classifies all contacts with greater than 4 hours of contact events as "close" and the rest as "casual". The top 4 close contacts and a random sample of 9 casual contacts are chosen respectively. And further down-sampled with the coverage fraction as defined for the specific strategy.
 
-The behaviour of the tracing strategies are based on the following parameters defined at line no. **300-313**
+The behaviour of the tracing strategies are based on the following parameters defined at line no. **[325](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L325)-[338](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L338)**
 
 Let us take a closer look at the "Conventional tracing" strategy
 ```R
@@ -545,9 +546,9 @@ CONST_CONTACT_TRACING_TIME_WINDOW = 7 # "Detect and discern close and casual con
 ```
 Here the tracing delay is placeholder for the operational delay in caused by communication with the individual with a positive result and the contact tracing system. The coverage fraction accounts for the errors inherent in tracing system. And finally the tracing time window defines till how far back in time the contacts of this individual are considered for tracing.
 
-This process is abstracted into a function called ```contactTrace <- function( traced_agent_id, tracing_day_index )``` at line no. **3175-3371**, which utilises "contact_matrices" or "neighbour_lists" and returns a list of agent ids.
+This process is abstracted into a function called ```contactTrace <- function( traced_agent_id, tracing_day_index )``` at line no. **[3236](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3236)-[3442](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3442)**, which utilises "contact_matrices" or "neighbour_lists" and returns a list of agent ids.
 
-Please note, a helper function ```batchContactTrace <- function(all_positive_test_result_ids, day_index)``` is intialised at line no. **3379-3418** for
+Please note, a helper function ```batchContactTrace <- function(all_positive_test_result_ids, day_index)``` is intialised at line no. **[3450](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3450)-[3489](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3489)** for
 &nbsp;
 
 ### Flow of gathering contacts
