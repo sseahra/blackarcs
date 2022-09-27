@@ -83,13 +83,13 @@ In our simulator we have the option of both designing a compartment model from s
 
 We utilise the R library igraph[^1] and initialise the list of disease model the simulator may account for and convert to its corresponding adjacency matrix, from line no. **[705](https://github.com/sseahra/blackarcs/blob/aa1ceb0946fb17204c28896936545f2eb1518dc2/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L705) - [2308](https://github.com/sseahra/blackarcs/blob/aa1ceb0946fb17204c28896936545f2eb1518dc2/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2308)** in [```Contagion_Simulator_vcalib14.R```](https://github.com/sseahra/blackarcs/blob/main/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R) :Individual state management
 
-- Complex model from Dr. Seahra - line no. **684 - 1600**
-- SIR - line no. **1600 - 1704**
-- SIR + Testing + Isolation - line no. **1704 - 1834**
-- SIR + Testing + Isolation + Contact Tracing - line no. **1834 - 1997**
-- [Incomplete] SIR + Hospitalisastion + Testing + Isolation + Contact Tracing - line no. **1997 - 2233**
+- Complex model from Dr. Seahra - line no. **[718](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L718) - [1693](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L1693)**
+- SIR - line no. **[1694](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L1694) - [1737](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L1737)**
+- SIR + Testing + Isolation - line no. **[1738](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L1738) - [1867](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L1867)**
+- SIR + Testing + Isolation + Contact Tracing - line no. **[1868](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L1868) - [2030](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2030)**
+- SIR + Hospitalisastion + Testing + Isolation + Contact Tracing - line no. **[2031](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2031) - [2300](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L2300)**
 
-And a parameter to select from these existing disease model is at line. no **119**
+And a parameter to select from these existing disease model is at line. no **[150](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L150)**
 ```R
 CONST_CHOSEN_DISEASE_MODEL <- "SIR"
 ```
@@ -128,7 +128,7 @@ $$Pr(X_{i+1} = A|X_{i} = A) = 1 - \sum k_{A \rightarrow A'} $$
 
  In the simplest form this is a Markov Chain[^2]
 
- In the simulator, we encode this step as in the line no. **3033 - 3096**,
+ In the simulator, we encode this step as in the line no. **[3100](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3100) - [3166](https://github.com/sseahra/blackarcs/blob/82f66db7fb4016307c4c0957ffa0f2c1ee9439a9/R_parsers_Avinaba/Contagion_Simulator_vcalib14.R#L3166)**,
  with the function
  ```R
  evolveNonSusceptible <- function(person_id)
