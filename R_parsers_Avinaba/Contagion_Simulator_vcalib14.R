@@ -62,8 +62,24 @@ CONST_ISOLATE_TRACED_OVERFLOW = FALSE # Set to true for congruence with original
 # SIM_SCRIPT_NAME = 'Campbellton_LocalDebug_SIR_w_IPDF_random_import_refactor_vcalib09_for_210d_location_wise'
 CONST_DAMP_FOR_COMMERCIAL = 1.0
 
+# Oct 05
+# SIM_SCRIPT_NAME = 'Oct05_Batch_01_Campbellton_SIR_sameday_tracing_without_2nd_level_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+SIM_SCRIPT_NAME = 'Oct05_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+
+# Sep 29
+# SIM_SCRIPT_NAME = 'Sep29_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+
+# Sep 27 
+# SIM_SCRIPT_NAME = 'Sep27_Batch_01_Campbellton_SIR_voluntary_testing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+
+# SIM_SCRIPT_NAME = 'Sep27_Batch_01_Campbellton_SIR_classic_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+
+# Sep 26 
+# SIM_SCRIPT_NAME = 'Sep26_Batch_01_Campbellton_SIR_sameday_tracing_fixed_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Sep26_Batch_01_Campbellton_SIR_voluntary_testing_fixed_import_vcalib14_00800_1mat_for_210d_aggregated'
+
 # Sep 25
-SIM_SCRIPT_NAME = 'Sep25_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Sep25_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
 
 # Sep 23
 # SIM_SCRIPT_NAME = 'Sep23_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
@@ -2775,12 +2791,15 @@ cat("Sampled Y3: ", sampled_y2, "\n")
 DAILY_NEW_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
 DAILY_ACTIVE_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
 
+# Tracks un-observed infectious
+DAILY_UNOBSERVED_INFECTIOUS_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
+
 # Set first day new cases to COUNT_FIRST_DAY_DISEASE_IMPORT for bookkeeping
 DAILY_NEW_CASES[1] <- COUNT_FIRST_DAY_DISEASE_IMPORT
 
 # Randomly distribute the infection import
 first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
-# Freezing disease import to agent 1, 2, 3 and 4 as decided with Robert
+# Freezing disease import to agent 1, 2, 3 and 4 as decided with Robert and Jarod
 # first_disease_import <- c(1, 2, 3, 4)
 
 
@@ -4426,8 +4445,14 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
               for(tracing_level in 1:CONST_SAMEDAY_TRACING_LEVEL){
                 
                 # Get subset of "result_requested_yesterday_ids" which were also queued for testing yesterday
-                result_requested_yesterday_ids <- which(test_schedule_mat[ , "result day"] == day_index - 1)
-                same_day_tested_yesterday_ids <- result_requested_yesterday_ids[ which(as.numeric(test_schedule_mat[result_requested_yesterday_ids, "test scheduled on"]) == day_index - 1) ]
+                # result_requested_yesterday_ids <- which(test_schedule_mat[ , "result day"] == day_index - 1)
+                # same_day_tested_yesterday_ids <- result_requested_yesterday_ids[ which(as.numeric(test_schedule_mat[result_requested_yesterday_ids, "test scheduled on"]) == day_index - 1) ]
+                
+                # Alternatively: Union all the sets 
+                same_day_tested_yesterday_ids <- union(result_requested_yesterday_not_infected_ids, 
+                                                       union(result_requested_yesterday_symptomatic_infectious_ids,
+                                                             result_requested_yesterday_asymptomatic_infectious_ids) )
+                
                 
                 # Get neighbours who were not queued for same day testing yesterday
                 # Note: This is applicable for models that does not require isolation while waiting for test results with result delay of 1 or more days
@@ -4459,18 +4484,21 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                   previous_day_result_requested_df <- subset(previous_day_df, as.numeric(rownames(previous_day_df)) %in% not_tested_yesterday_neighbours_agent_ids)
                   
                   if(CONST_CHOSEN_DISEASE_MODEL ==  "SIR + Testing + Isolation + Contact Tracing") {
-                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
-                    test_requested_yesterday_removed_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "removed"))))
+                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
+                    test_requested_yesterday_removed_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "removed"))))
                     
                   } else if(CONST_CHOSEN_DISEASE_MODEL ==  "SIR + Testing + Isolation + Hospitalisation + Contact Tracing") {
-                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
-                    test_requested_yesterday_recovered_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "recovered"))))
+                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
+                    test_requested_yesterday_recovered_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "recovered"))))
                   }
                   
                   # Filter out symptomatic infectious test seekers
-                  test_requested_yesterday_symptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id %in% STATELIST_SYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
+                  test_requested_yesterday_symptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id %in% STATELIST_SYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
                   # Filter out asymptomatic infectious test seekers
-                  test_requested_yesterday_asymptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id %in% STATELIST_ASYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
+                  test_requested_yesterday_asymptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id %in% STATELIST_ASYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
+                  
+                  
+                  
                   
                   if(CONST_CHOSEN_DISEASE_MODEL ==  "SIR + Testing + Isolation + Contact Tracing") {
                     # For SIR+++ process multiple non-infected test-seeker states, namely: susceptible and removed
@@ -6410,7 +6438,7 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
               # Assuming predefined level of same day tracing and testing as "CONST_SAMEDAY_TRACING_LEVEL"
               # i.e. All neighbours of a particular agent who receives a positive test result
-              # is tested same day. This process is not recursed further till the maximum tracing level is reached.
+              # is tested same day. This process is not recurred further till the maximum tracing level is reached.
 
 
               for(tracing_level in 1:CONST_SAMEDAY_TRACING_LEVEL){
@@ -6445,23 +6473,29 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                   previous_day_df <- data.frame(STATE[ , day_index - 1])
                   colnames(previous_day_df) <- c("state_id")
 
+                  # Update previous_day_df
+                  previous_day_df <- data.frame(STATE[ , day_index - 1])
+                  colnames(previous_day_df) <- c("state_id")
+                  
                   # Filter states only for same day traced result requesting ids
                   previous_day_result_requested_df <- subset(previous_day_df, as.numeric(rownames(previous_day_df)) %in% not_tested_yesterday_neighbours_agent_ids)
-
+                  
                   if(CONST_CHOSEN_DISEASE_MODEL ==  "SIR + Testing + Isolation + Contact Tracing") {
-                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
-                    test_requested_yesterday_removed_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "removed"))))
-
+                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
+                    test_requested_yesterday_removed_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "removed"))))
+                    
                   } else if(CONST_CHOSEN_DISEASE_MODEL ==  "SIR + Testing + Isolation + Hospitalisation + Contact Tracing") {
-                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
-                    test_requested_yesterday_recovered_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id == which(STATE_NAMES == "recovered"))))
+                    test_requested_yesterday_susceptible_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "susceptible"))))
+                    test_requested_yesterday_recovered_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id == which(STATE_NAMES == "recovered"))))
                   }
-
+                  
                   # Filter out symptomatic infectious test seekers
-                  test_requested_yesterday_symptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id %in% STATELIST_SYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
+                  test_requested_yesterday_symptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id %in% STATELIST_SYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
                   # Filter out asymptomatic infectious test seekers
-                  test_requested_yesterday_asymptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_test_requested_df, state_id %in% STATELIST_ASYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
-
+                  test_requested_yesterday_asymptomatic_infectious_ids <- as.numeric(rownames(subset(previous_day_result_requested_df, state_id %in% STATELIST_ASYMPTOMATIC_INFECTIOUS_TEST_SEEKER)))
+                  
+                  
+                  
                   if(CONST_CHOSEN_DISEASE_MODEL ==  "SIR + Testing + Isolation + Contact Tracing") {
                     # For SIR+++ process multiple non-infected test-seeker states, namely: susceptible and removed
                     STATE[ test_requested_yesterday_susceptible_ids , day_index - 1] <- which(STATE_NAMES == "(isolated) susceptible")
@@ -7441,6 +7475,12 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
       # Non-susceptible
       # Note: Without this guard clause the STATE vector was mutating to lists
+      
+      # Debug: 
+      # cat("\nEvolving today: \n")
+      # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_non_susceptible_person_ids, day_index - 1]])))
+      # cat("\n")
+      
       if(length(previous_day_non_susceptible_person_ids) > 0){
         # Previous day states
         # previous_day_infected_person_states <- STATE[previous_day_infectious_person_ids, day_index - 1]
@@ -7648,6 +7688,8 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
       previous_day_df <- data.frame(STATE[ , day_index - 1])
       colnames(previous_day_df) <- c("state_id")
       COUNT_ACTIVE_CASES_YESTERDAY <- nrow(filter(previous_day_df, state_id %in% STATELIST_ACTIVE_CASES))
+      
+      COUNT_UNOBSERVED_INFECTIOUS_YESTERDAY <- nrow(filter(previous_day_df, state_id %in% STATELIST_INFECTIOUS) )
 
       # this_day_active_cases_person_ids <- which(sapply(STATE[ , day_index], FUN = isActiveCaseState) == TRUE)
       # COUNT_ACTIVE_CASES <- length(this_day_active_cases_person_ids)
@@ -7657,6 +7699,8 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
       # Book keeping for SIR + Testing + Isolation, SIR + Testing + Isolation + Contact Tracing
       DAILY_ACTIVE_CASES [day_index - 1] <- COUNT_ACTIVE_CASES_YESTERDAY
+      
+      DAILY_UNOBSERVED_INFECTIOUS_CASES[day_index - 1] <- COUNT_UNOBSERVED_INFECTIOUS_YESTERDAY
 
       # For models with testing log test positivity
       if( (CONST_CHOSEN_DISEASE_MODEL == "SIR + Testing + Isolation") ||
@@ -7973,6 +8017,7 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
   cat("No. of random samples drawn to check for infection success: ", COUNT_NO_OF_INFECTION_COIN_FLIPS, "\n", sep = "")
   cat("No. of positive infections: ", COUNT_NO_OF_INFECTION_EVENTS, "\n", sep = "")
   cat("Peak observed active cases: : ", max(DAILY_ACTIVE_CASES), "\n", sep = "")
+  cat("Peak unobserved infectious cases: ", max(DAILY_UNOBSERVED_INFECTIOUS_CASES), "\n", sep = "")
 
   # cat("No. of Possiible infection events: ", random_sample_iterator, "\n")
 
@@ -7982,7 +8027,13 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
   # Plot before refreshing
   {
-    plot(DAILY_ACTIVE_CASES, col = "#0000FF", lwd = 1, lty = 1)
+    plot( DAILY_ACTIVE_CASES, col = "#0000FF", type = 'l', 
+          main = "(Blue) Observed active vs. (Red) Unobserved infectous", 
+          sub =  paste("Model: ", CONST_CHOSEN_DISEASE_MODEL ,", Run no.: ", run_index, " of ", TOTAL_SIMULATION_RUNS, sep = "" ),
+          xlab = "Simulation day",
+          ylab = "No. of agent")
+    
+    lines(DAILY_UNOBSERVED_INFECTIOUS_CASES, col = "#FF0000", lwd = 1, lty = 1)
   }
 
 
@@ -8085,6 +8136,9 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
     rm(DAILY_ACTIVE_CASES)
     DAILY_ACTIVE_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
+    
+    rm(DAILY_UNOBSERVED_INFECTIOUS_CASES)
+    DAILY_UNOBSERVED_INFECTIOUS_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim = TOTAL_SIMULATION_DAYS )
 
     # Set first day new cases to COUNT_FIRST_DAY_DISEASE_IMPORT for bookkeeping
     DAILY_NEW_CASES[1] <- COUNT_FIRST_DAY_DISEASE_IMPORT
@@ -8099,7 +8153,7 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
     # Randomly distribute the infection import
     first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
-    # Freezing disease import to agent 1, 2, 3 and 4 as decided with Robert
+    # Freezing disease import to agent 1, 2, 3 and 4 as decided with Robert and Jarod
     # first_disease_import <- c(1, 2, 3, 4)
 
 
@@ -8277,3 +8331,15 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
     cat("\n\n")
   }
 }
+
+
+# Code-scraps 
+
+# Frequency count of a vector 'x'
+# as.data.frame(table(x))
+# 
+# Eg.
+# print(as.data.frame(table(STATE_NAMES[STATE[previous_day_non_susceptible_person_ids, day_index - 1]])))
+
+
+# Change output from console to a file
