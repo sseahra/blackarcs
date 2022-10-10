@@ -60,19 +60,23 @@ CONST_SAMEDAY_TRACING_LEVEL <- 1 # How many levels of neighbours may be traced i
 CONST_ISOLATE_TRACED_OVERFLOW = FALSE # Set to true for congruence with original Julia implement
 
 CONST_ENABLE_VACCINATION = TRUE # May be set to false for vaccination enabled models for quick checks
+CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION = 28 # Agents cannot be vaccinated within a specific time period
 CONST_STATIC_VACCINATION_RATE = TRUE # Set to FALSE to transition based on observed vaccination disbursal rates
-CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE = 0.01
-CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1 = 0.01
-CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2 = 0.01
+CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE = 0.3 # 0.01
+CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1 = 0.2 # 0.01
+CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2 = 0.1 # 0.01
 
 
 # SIM_SCRIPT_NAME = 'Campbellton_LocalDebug_SIR_w_IPDF_random_import_refactor_vcalib09_for_210d_location_wise'
 CONST_DAMP_FOR_COMMERCIAL = 1.0
 
 # Oct 10
-SIM_SCRIPT_NAME = 'Oct09_LocalDebug_Campbellton_SIR_Vaccines_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+SIM_SCRIPT_NAME = 'Oct10_LocalDebug_Campbellton_SIR_static_Vaccines_with28dLimit_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Oct10_LocalDebug_Campbellton_SIR_static_Vaccines_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Oct10_Campbellton_SIR_static_Vaccines_random_import_vcalib14_00800_1mat_for_210d_aggregated'
 
 # Oct 09
+# SIM_SCRIPT_NAME = 'Oct09_LocalDebug_Campbellton_SIR_Vaccines_random_import_vcalib14_00800_1mat_for_210d_aggregated'
 # SIM_SCRIPT_NAME = 'Oct09_Batch_01_Campbellton_SIR_classic_random_import_vcalib14_00800_30mat_for_210d_aggregated'
 
 # Oct 08
@@ -188,7 +192,7 @@ SIM_SCRIPT_NAME = 'Oct09_LocalDebug_Campbellton_SIR_Vaccines_random_import_vcali
 
 
 TOTAL_SIMULATION_DAYS <- 210
-TOTAL_SIMULATION_RUNS <- 1
+TOTAL_SIMULATION_RUNS <- 199
 
 CONST_CHOSEN_DISEASE_MODEL <- "SIR + Vaccination"
 # Human readable disease model names
@@ -385,6 +389,7 @@ cat("\nCONST_ENABLE_VACCINATION: ", CONST_ENABLE_VACCINATION)
 if(CONST_ENABLE_VACCINATION){
   cat("\nCONST_STATIC_VACCINATION_RATE: ", CONST_STATIC_VACCINATION_RATE)
   if(CONST_STATIC_VACCINATION_RATE){
+    cat("\n |-CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION: ", CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION)
     cat("\n |-CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE: ", CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE, sep = "")
     cat("\n |-CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1: ", CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1, sep = "")
     cat("\n '-CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2: ", CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2, sep = "")
@@ -3773,9 +3778,14 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
             
             # Gather agents who may be vaccinated 
             previous_day_dose0 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "susceptible")]
-            previous_day_dose1 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose1")]
-            previous_day_dose2 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose2")]
             
+            previous_day_dose1 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose1")]
+            # Remove agents who were vaccinated within CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION
+            previous_day_dose1 <- previous_day_dose1[which((as.numeric(infection_hist_mat[previous_day_dose1, "dose 1 on"]) - (day_index - 1)) > CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION )]
+            
+            previous_day_dose2 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose2")]
+            # Remove agents who were vaccinated within CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION
+            previous_day_dose2 <- previous_day_dose2[which((as.numeric(infection_hist_mat[previous_day_dose2, "dose 2 on"]) - (day_index - 1)) > CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION )]
             
             # Debug: 
             # cat("\nTo Vaccinate Susceptible: \n")
@@ -5903,8 +5913,14 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
             
             # Gather agents who may be vaccinated 
             previous_day_dose0 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "susceptible")]
+            
             previous_day_dose1 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose1")]
+            # Remove agents who were vaccinated within CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION
+            previous_day_dose1 <- previous_day_dose1[which((as.numeric(infection_hist_mat[previous_day_dose1, "dose 1 on"]) - (day_index - 1)) > CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION )]
+            
             previous_day_dose2 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose2")]
+            # Remove agents who were vaccinated within CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION
+            previous_day_dose2 <- previous_day_dose2[which((as.numeric(infection_hist_mat[previous_day_dose2, "dose 2 on"]) - (day_index - 1)) > CONST_MIN_DAYS_SINCE_LAST_STATIC_VACCINATION )]
             
          
             # Debug: 
@@ -8844,3 +8860,10 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
 
 # Change output from console to a file
+# sink(<FILENAME>)
+
+# Draw contact matrix as graph
+# temp_POP_SUBSET <- 100
+# temp_subset_contact_matrix <- contact_matrix[1:temp_POP_SUBSET, 1:temp_POP_SUBSET]
+# temp_graph <- graph_from_adjacency_matrix(temp_subset_contact_matrix, weighted = TRUE, mode = "undirected")
+# plot(temp_graph, layout =  layout.sphere, vertex.color = "#FFFFFF", vertex.label=NA, edge.color = "#00000022") 
