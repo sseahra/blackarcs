@@ -51,7 +51,7 @@ CONST_CHOSEN_TEST_ALLOCATION_STRATEGY <- "Antigen test first"
 # Rough algorithm: "Whenever a positive result of a covid test is reported, the neighbours of the particular agent are queued for testing
 #                   with appropriate delays"
 
-CONST_ENABLE_CONTACT_TRACING = TRUE
+CONST_ENABLE_CONTACT_TRACING = FALSE
 CONTACT_TRACING_STRATEGY_NAMES <- c( "Conventional tracing", "Mobile app based tracing" )
 CONST_CHOSEN_CONTACT_TRACING_STRATEGY <- "Mobile app based tracing"
 CONST_CHOSEN_CLOSE_CONTACT_NUMBER <- 4 # Magic number
@@ -59,12 +59,39 @@ CONST_CHOSEN_CASUAL_CONTACT_NUMBER <- 9 # Magic number
 CONST_SAMEDAY_TRACING_LEVEL <- 1 # How many levels of neighbours may be traced in a single day (before spilling the traced testing to the next day)
 CONST_ISOLATE_TRACED_OVERFLOW = FALSE # Set to true for congruence with original Julia implement
 
+CONST_ENABLE_VACCINATION = TRUE # May be set to false for vaccination enabled models for quick checks
+CONST_STATIC_VACCINATION_RATE = TRUE # Set to FALSE to transition based on observed vaccination disbursal rates
+CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE = 0.01
+CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1 = 0.01
+CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2 = 0.01
+
+
 # SIM_SCRIPT_NAME = 'Campbellton_LocalDebug_SIR_w_IPDF_random_import_refactor_vcalib09_for_210d_location_wise'
 CONST_DAMP_FOR_COMMERCIAL = 1.0
 
+# Oct 10
+SIM_SCRIPT_NAME = 'Oct09_LocalDebug_Campbellton_SIR_Vaccines_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+
+# Oct 09
+# SIM_SCRIPT_NAME = 'Oct09_Batch_01_Campbellton_SIR_classic_random_import_vcalib14_00800_30mat_for_210d_aggregated'
+
+# Oct 08
+# SIM_SCRIPT_NAME = 'Oct08_Batch_01_Campbellton_SIR_hospitalisation_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Oct08_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Oct08_Batch_02_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_location_based'
+
+# Oct 07
+# SIM_SCRIPT_NAME = 'Oct07_Batch_01_Campbellton_SIR_hospitalisation_sameday_tracing_random_import_vcalib14_00800_30mat_for_210d_location_based'
+# SIM_SCRIPT_NAME = 'Oct07_Batch_01_Campbellton_SIR_hospitalisation_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_location_based'
+# SIM_SCRIPT_NAME = 'Oct07_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_location_based'
+
+
+# Oct 06
+# SIM_SCRIPT_NAME = 'Oct06_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+
 # Oct 05
 # SIM_SCRIPT_NAME = 'Oct05_Batch_01_Campbellton_SIR_sameday_tracing_without_2nd_level_random_import_vcalib14_00800_1mat_for_210d_aggregated'
-SIM_SCRIPT_NAME = 'Oct05_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
+# SIM_SCRIPT_NAME = 'Oct05_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
 
 # Sep 29
 # SIM_SCRIPT_NAME = 'Sep29_Batch_01_Campbellton_SIR_sameday_tracing_random_import_vcalib14_00800_1mat_for_210d_aggregated'
@@ -163,14 +190,15 @@ SIM_SCRIPT_NAME = 'Oct05_Batch_01_Campbellton_SIR_sameday_tracing_random_import_
 TOTAL_SIMULATION_DAYS <- 210
 TOTAL_SIMULATION_RUNS <- 1
 
-CONST_CHOSEN_DISEASE_MODEL <- "SIR + Testing + Isolation + Contact Tracing"
+CONST_CHOSEN_DISEASE_MODEL <- "SIR + Vaccination"
 # Human readable disease model names
 # Note: this is loosely implemented with manual string matching
 DISEASE_MODEL_NAMES <- c ("SIR",
                           "Complex",
                           "SIR + Testing + Isolation",
                           "SIR + Testing + Isolation + Contact Tracing",
-                          "SIR + Testing + Isolation + Hospitalisation + Contact Tracing")
+                          "SIR + Testing + Isolation + Hospitalisation + Contact Tracing",
+                          "SIR + Vaccination")
 
 # Tag: @calib04
 CONST_CHOSEN_CONTACT_MATRIX_TYPE <- "Aggregated"
@@ -353,7 +381,16 @@ if( CONST_ENABLE_CONTACT_TRACING && (CONST_CHOSEN_CONTACT_TRACING_STRATEGY == "C
   CONST_CONTACT_TRACING_TIME_WINDOW = 7 # "Detect and discern close and casual contacts from the day of receiving a positive result + tracing delay"
 }
 
-
+cat("\nCONST_ENABLE_VACCINATION: ", CONST_ENABLE_VACCINATION)
+if(CONST_ENABLE_VACCINATION){
+  cat("\nCONST_STATIC_VACCINATION_RATE: ", CONST_STATIC_VACCINATION_RATE)
+  if(CONST_STATIC_VACCINATION_RATE){
+    cat("\n |-CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE: ", CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE, sep = "")
+    cat("\n |-CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1: ", CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1, sep = "")
+    cat("\n '-CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2: ", CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2, sep = "")
+    
+  }
+}
 # @Vaccination initial proportion
 
 # Observational proportional data of vaccination status of population from 5 years and above
@@ -476,6 +513,7 @@ LIST_OF_CONTACT_MATRIX_FILEPATH  <-
   LIST_OF_CONTACT_MATRIX_FILEPATH  <-
     list.files(CONTACT_MATRIX_DIR, full.names = TRUE, pattern="contact\\_matrix\\-per\\-location\\-real\\.csv$", ignore.case = TRUE)
 }
+
 
 # Quick and dirty debug counters
 COUNT_NO_OF_INFECTION_COIN_FLIPS = 0
@@ -767,14 +805,29 @@ if (CONST_CHOSEN_DISEASE_MODEL == "Complex") {
                                       "received_dose2","received_dose3"), directed = TRUE)
 
     # Vaccination/day parameters, look up @Vaccination Rates
-    E(disease_model, path = c("susceptible", "received_dose1") )$weight <- 0.0
-    E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
-
-    E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- 0.0
-    E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
-
-    E(disease_model, path = c("received_dose2", "received_dose3") )$weight <- 0.0
-    E(disease_model, path = c("received_dose2", "received_dose3") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+    if(CONST_STATIC_VACCINATION_RATE){
+      # Pre-set if using constant vaccination rate
+      E(disease_model, path = c("susceptible", "received_dose1") )$weight <- CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE
+      E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0(CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE)
+      
+      E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1
+      E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0(CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1)
+      
+      E(disease_model, path = c("received_dose2", "received_dose3") )$weight <- CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2
+      E(disease_model, path = c("received_dose2", "received_dose3") )$label <- paste0(CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2)
+      
+    } else{
+      # Setup to look up @Vaccination Rates
+      E(disease_model, path = c("susceptible", "received_dose1") )$weight <- 0.0
+      E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+      
+      E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- 0.0
+      E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+      
+      E(disease_model, path = c("received_dose2", "received_dose3") )$weight <- 0.0
+      E(disease_model, path = c("received_dose2", "received_dose3") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+      
+    }
 
 
     # For people who are not vaccinated: Infection transition/day parameters
@@ -2313,7 +2366,138 @@ if (CONST_CHOSEN_DISEASE_MODEL == "Complex") {
   STATELIST_NOT_INFECTED_RESULT_SEEKER <- which( colnames(transition_matrix) == "(isolated) susceptible" |
                                                    colnames(transition_matrix) == "(isolated) recovered") # Non-voluntary contact-tracing based test-result seeker
 
-}
+} else if(CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination"){
+  # Begin construction of SIR disease model
+  # ----------------------------
+  
+  cat("\nConstructing disease model: ", CONST_CHOSEN_DISEASE_MODEL, sep = "")
+  
+  # Infection states for 0 doses:
+  disease_model <- graph( edges = c("susceptible","00_infected",
+                                    "00_infected", "00_removed"), directed = TRUE)
+  
+  # For people who are infected: transition/day parameters
+  REMOVAL_RATE_WITHOUT_VACCINE <- 1/10 # gamma
+  REMOVAL_RATE_WITH_1_DOSE <- 1/8 # gamma
+  REMOVAL_RATE_WITH_2_DOSE <- 1/6 # gamma
+  REMOVAL_RATE_WITH_3_DOSE <- 1/4 # gamma
+  
+  E(disease_model, path = c("susceptible","00_infected") )$weight <- "CALCULATE_FROM_CONTACT_MATRIX"
+  E(disease_model, path = c("susceptible","00_infected") )$label <- paste0("CALCULATE_FROM_CONTACT_MATRIX")
+  
+  E(disease_model, path = c("00_infected", "00_removed") )$weight <- REMOVAL_RATE_WITHOUT_VACCINE
+  E(disease_model, path = c("00_infected", "00_removed") )$label <- paste0(REMOVAL_RATE_WITHOUT_VACCINE)
+  
+  
+  # Vaccination transitions
+  disease_model <- disease_model + graph( edges = c("susceptible","received_dose1",
+                                                    "received_dose1","received_dose2",
+                                                    "received_dose2","received_dose3"), directed = TRUE)
+  
+  # Vaccination/day parameters, 
+
+  if(CONST_STATIC_VACCINATION_RATE){
+    # Pre-set if using constant vaccination rate
+    E(disease_model, path = c("susceptible", "received_dose1") )$weight <- CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE
+    E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0(CONST_VACCINATION_CHANCE_FOR_SUSCEPTIBLE)
+    
+    E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1
+    E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0(CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_1)
+    
+    E(disease_model, path = c("received_dose2", "received_dose3") )$weight <- CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2
+    E(disease_model, path = c("received_dose2", "received_dose3") )$label <- paste0(CONST_VACCINATION_CHANCE_FOR_RECEIVED_DOSE_2)
+    
+  } else{
+    # Setup to look up @Vaccination Rates
+    E(disease_model, path = c("susceptible", "received_dose1") )$weight <- 0.0
+    E(disease_model, path = c("susceptible", "received_dose1") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+    
+    E(disease_model, path = c("received_dose1", "received_dose2") )$weight <- 0.0
+    E(disease_model, path = c("received_dose1", "received_dose2") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+    
+    E(disease_model, path = c("received_dose2", "received_dose3") )$weight <- 0.0
+    E(disease_model, path = c("received_dose2", "received_dose3") )$label <- paste0("BASED ON VACCINE DISBURSAL DATA")
+    
+  }
+  
+  # 1 Dose track
+  disease_model <- disease_model + 
+    graph( edges = c("received_dose1","01_infected",
+                     "01_infected", "01_removed"), directed = TRUE)
+  
+  E(disease_model, path = c("received_dose1","01_infected") )$weight <- "CALCULATE_FROM_CONTACT_MATRIX"
+  E(disease_model, path = c("received_dose1","01_infected") )$label <- paste0("CALCULATE_FROM_CONTACT_MATRIX")
+  
+  E(disease_model, path = c("01_infected", "01_removed") )$weight <- REMOVAL_RATE_WITH_1_DOSE
+  E(disease_model, path = c("01_infected", "01_removed") )$label <- paste0(REMOVAL_RATE_WITH_1_DOSE)
+  
+  
+  
+  
+  # 2 Dose track
+  disease_model <- disease_model + 
+    graph( edges = c("received_dose2","02_infected",
+                     "02_infected", "02_removed"), directed = TRUE)
+  
+  E(disease_model, path = c("received_dose2","02_infected") )$weight <- "CALCULATE_FROM_CONTACT_MATRIX"
+  E(disease_model, path = c("received_dose2","02_infected") )$label <- paste0("CALCULATE_FROM_CONTACT_MATRIX")
+  
+  E(disease_model, path = c("02_infected", "02_removed") )$weight <- REMOVAL_RATE_WITH_2_DOSE
+  E(disease_model, path = c("02_infected", "02_removed") )$label <- paste0(REMOVAL_RATE_WITH_2_DOSE)
+  
+  
+  # 3 Dose track
+  disease_model <- disease_model + 
+    graph( edges = c("received_dose3","03_infected",
+                     "03_infected", "03_removed"), directed = TRUE)
+  
+  E(disease_model, path = c("received_dose3","03_infected") )$weight <- "CALCULATE_FROM_CONTACT_MATRIX"
+  E(disease_model, path = c("received_dose3","03_infected") )$label <- paste0("CALCULATE_FROM_CONTACT_MATRIX")
+  
+  E(disease_model, path = c("03_infected", "03_removed") )$weight <- REMOVAL_RATE_WITH_3_DOSE
+  E(disease_model, path = c("03_infected", "03_removed") )$label <- paste0(REMOVAL_RATE_WITH_3_DOSE)
+  
+  
+  
+  
+  
+  # Generate transition matrix
+  transition_matrix <- as_adjacency_matrix(disease_model, attr="weight", sparse = FALSE)
+  
+  STATE_NAMES = colnames(transition_matrix)
+  
+  # Book keeping
+  
+  # Calibration mode:
+  STATELIST_SUSCEPTIBLE <- which(colnames(transition_matrix) == "susceptible" |
+                                   colnames(transition_matrix) == "received_dose1" |
+                                   colnames(transition_matrix) == "received_dose2" | 
+                                   colnames(transition_matrix) == "received_dose3" )
+  
+  STATELIST_INFECTIOUS <- which(colnames(transition_matrix) == "00_infected" |
+                                  colnames(transition_matrix) == "01_infected" |
+                                  colnames(transition_matrix) == "02_infected" | 
+                                  colnames(transition_matrix) == "03_infected" )
+  
+  # Separated to setup proportions of Omicron and Non-omicron infection events
+  STATELIST_INFECTIOUS_OMICRON <- c()
+  
+  STATELIST_NEW_CASES <- which(colnames(transition_matrix) == "00_infected" |
+                                 colnames(transition_matrix) == "01_infected" |
+                                 colnames(transition_matrix) == "02_infected" | 
+                                 colnames(transition_matrix) == "03_infected" )
+  
+  STATELIST_ACTIVE_CASES <- which(colnames(transition_matrix) == "00_infected" |
+                                    colnames(transition_matrix) == "01_infected" |
+                                    colnames(transition_matrix) == "02_infected" | 
+                                    colnames(transition_matrix) == "03_infected" )
+  
+  STATELIST_TERMINAL <- which(colnames(transition_matrix) == "00_removed" |
+                                colnames(transition_matrix) == "01_removed" |
+                                colnames(transition_matrix) == "02_removed" | 
+                                colnames(transition_matrix) == "03_removed" )
+  
+} 
 
 
 
@@ -2729,7 +2913,7 @@ if(CONST_CHOSEN_CONTACT_MATRIX_TYPE == "Aggregated"){
 possible_vaccinated_agent_list <- intersect(demographic_data_mat[ which( strtoi( demographic_data_mat[ , "age"] ) >=  5)], seq(1:COUNT_MAX_PERSON_ID))
 
 # Set vaccination state for day 1
-if (CONST_CHOSEN_DISEASE_MODEL == "Complex"){
+if (CONST_CHOSEN_DISEASE_MODEL == "Complex" || CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination"){
   for(person_id in possible_vaccinated_agent_list){
     vaccination_state <- sample(c( which(colnames(transition_matrix) == "susceptible"),
                                     which(colnames(transition_matrix) ==  "received_dose1"),
@@ -2758,12 +2942,6 @@ if (CONST_CHOSEN_DISEASE_MODEL == "Complex"){
       infection_hist_mat[person_id, "dose 1 on"] <- -1
     }
   }
-} else if (CONST_CHOSEN_DISEASE_MODEL == "SIR") {
-
-  # No vaccination in simple SIR
-} else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Testing + Isolation") {
-
-  # No vaccination implemented in SIR + Testing + Isolation + Contact Tracing
 }
 
 # Initial populations
@@ -2798,12 +2976,12 @@ DAILY_UNOBSERVED_INFECTIOUS_CASES <- array( rep(0, TOTAL_SIMULATION_DAYS), dim =
 DAILY_NEW_CASES[1] <- COUNT_FIRST_DAY_DISEASE_IMPORT
 
 # Randomly distribute the infection import
-first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
+# first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
 # Freezing disease import to agent 1, 2, 3 and 4 as decided with Robert and Jarod
 # first_disease_import <- c(1, 2, 3, 4)
 
 
-# first_disease_import <- sample(init_list_of_person_with_0_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
+first_disease_import <- sample(init_list_of_person_with_0_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
 # first_disease_import <- sample(init_list_of_person_with_1_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
 # first_disease_import <- sample(init_list_of_person_with_2_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
 # first_disease_import <- sample(init_list_of_person_with_3_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
@@ -2942,6 +3120,26 @@ for(person_id in first_disease_import){
     if(present_state == which(colnames(transition_matrix) == "susceptible")){
       infected_state <- which(colnames(transition_matrix) == "(unconfirmed) infected")
 
+    }
+  } else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination"){
+    
+    if(present_state == which(colnames(transition_matrix) == "susceptible")){
+      # No vaccination
+      
+      infected_state <- which(colnames(transition_matrix) == "00_infected")
+      
+    } else if(present_state == which(colnames(transition_matrix) == "received_dose1")){
+      # 1 Dose of vaccine
+      infected_state <- which(colnames(transition_matrix) == "01_infected")
+      
+    } else if(present_state == which(colnames(transition_matrix) == "received_dose2")){
+      # 2 Dose of Vaccine
+      infected_state <- which(colnames(transition_matrix) == "02_infected")
+      
+    } else if(present_state == which(colnames(transition_matrix) == "received_dose3")){
+      # 3 Dose of Vaccine
+      infected_state <- which(colnames(transition_matrix) == "03_infected")
+      
     }
   } else {
 
@@ -3563,78 +3761,160 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
         # cat("   \n Iterating on Susceptibles")
 
         # Tag: @Vaccination Rates "Did anyone get vaccinated yesterday?"
-        if (CONST_CHOSEN_DISEASE_MODEL == "Complex"){
-          for (person_id in previous_day_susceptible_person_ids){
-
-            # Get state of this person from previous day
-            PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
-            PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX] # Note: At this point STATE_NAME is a matrix, by the end of execution it's converted to df for CSV IO
-
-            # Vaccination state changes during simulation time
-            # -------------------
-            # Check if the person may have been vaccinated last simulation day
-            # i.e. is in succeptible or received_dose_1 state
-            # This breaks new evolution function: NO_OF_VACCINATION_DATA_BASED_TRANSITION <- length(which( POSSIBLE_TRANSITIONS_mat[ , "transition_weights"] == "CALCULATE_FROM_VACCINATION_DATA"))
-
-            this_vaccination_chance = runif(1)
-
-            if(PREV_STATE_NAME == "susceptible" || PREV_STATE_NAME == "received_dose1"){
-
-              # Get vaccination data and roll dice for possible vaccination last day
-              vaccination_day_index <- day_index - 1
-
-              # Re-use last available vaccination rates
-              if(vaccination_day_index > nrow(vaccination_perday_mat)) {
-                vaccination_day_index <- nrow(vaccination_perday_mat)
-              }
-
-              if(PREV_STATE_NAME == "susceptible" &&
-                 vaccination_perday_mat[vaccination_day_index , "dose1"] > 0){
-
-                dose1_prob <- vaccination_perday_mat[vaccination_day_index , "dose1"] / CONST_NB_POP
-
-                # Force negative fractions to 0, to counteract artifacts in the data
-                if(dose1_prob < 0) { dose1_prob = 0 }
-
-                else if( this_vaccination_chance <= dose1_prob){
-                  prev_state_id <- which( colnames(transition_matrix) == "received_dose1" )
-
-                  # Set state
-                  STATE[person_id, day_index - 1] <- prev_state_id
-
-                  # Book keeping
-                  infection_hist_mat[person_id, "dose 1 on"] <- day_index - 1
+        # Refresh list of vaccinated agents
+        agents_vaccinated_yesterday = c()
+        
+        if (CONST_ENABLE_VACCINATION && (CONST_CHOSEN_DISEASE_MODEL == "Complex" || CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination" )) {
+          
+          # Vaccination rate is constant
+          # Vaccination rate is constant
+          if(CONST_STATIC_VACCINATION_RATE){
+            
+            
+            # Gather agents who may be vaccinated 
+            previous_day_dose0 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "susceptible")]
+            previous_day_dose1 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose1")]
+            previous_day_dose2 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose2")]
+            
+            
+            # Debug: 
+            # cat("\nTo Vaccinate Susceptible: \n")
+            # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_dose0, day_index - 1]])))
+            # 
+            # cat("\nTo Vaccinate Received dose 1: \n")
+            # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_dose1, day_index - 1]])))
+            # 
+            # cat("\nTo Vaccinate Received dose 2: \n")
+            # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_dose2, day_index - 1]])))
+            
+            # 0 to 1st dose transition 
+            vaccination_chance_to_dose1 = as.numeric(transition_matrix["susceptible", "received_dose1"])
+            vaccination_coin_flips_dose1 = runif(length(previous_day_dose0))
+            vaccinated_to_dose1 = previous_day_dose0[which(vaccination_coin_flips_dose1 <= vaccination_chance_to_dose1)]
+            STATE[vaccinated_to_dose1 , day_index - 1] = which(STATE_NAMES == "received_dose1")
+            
+            if(length(vaccinated_to_dose1) > 0){
+              # Book keeping
+              infection_hist_mat[vaccinated_to_dose1, "dose 1 on"] <- day_index - 1
+              # For iterator sets 
+              agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, vaccinated_to_dose1)
+            }
+            
+            
+            
+            # 1st to 2nd dose transition
+            vaccination_chance_to_dose2 = as.numeric(transition_matrix["received_dose1", "received_dose2"])
+            vaccination_coin_flips_dose2 = runif(length(previous_day_dose1))
+            vaccinated_to_dose2 = previous_day_dose1[which(vaccination_coin_flips_dose2 <= vaccination_chance_to_dose2)]
+            STATE[vaccinated_to_dose2 , day_index - 1] = which(STATE_NAMES == "received_dose2")
+            
+            if(length(vaccinated_to_dose2) > 0){
+              # Book keeping
+              infection_hist_mat[vaccinated_to_dose2, "dose 2 on"] <- day_index - 1
+              # For iterator sets 
+              agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, vaccinated_to_dose2)
+            }
+            
+            
+            
+            
+            # 2md to 3rd dose transition
+            vaccination_chance_to_dose3 = as.numeric(transition_matrix["received_dose2", "received_dose3"])
+            vaccination_coin_flips_dose3 = runif(length(previous_day_dose2))
+            vaccinated_to_dose3 = previous_day_dose2[which(vaccination_coin_flips_dose3 <= vaccination_chance_to_dose3)]
+            STATE[vaccinated_to_dose3 , day_index - 1] = which(STATE_NAMES == "received_dose3")
+            
+            if(length(vaccinated_to_dose3) > 0){
+              # Book keeping
+              infection_hist_mat[vaccinated_to_dose3, "dose 3 on"] <- day_index - 1
+              # For iterator sets 
+              agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, vaccinated_to_dose3)
+            }
+            
+            
+            
+            
+            
+          } else {
+            # Vaccination rate from observed rates
+            for (person_id in previous_day_susceptible_person_ids){
+              
+              # Get state of this person from previous day
+              PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
+              PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX] # Note: At this point STATE_NAME is a matrix, by the end of execution it's converted to df for CSV IO
+              
+              # Vaccination state changes during simulation time
+              # -------------------
+              # Check if the person may have been vaccinated last simulation day
+              # i.e. is in succeptible or received_dose_1 state
+              # This breaks new evolution function: NO_OF_VACCINATION_DATA_BASED_TRANSITION <- length(which( POSSIBLE_TRANSITIONS_mat[ , "transition_weights"] == "CALCULATE_FROM_VACCINATION_DATA"))
+              
+              this_vaccination_chance = runif(1)
+              
+              if(PREV_STATE_NAME == "susceptible" || PREV_STATE_NAME == "received_dose1"){
+                
+                # Get vaccination data and roll dice for possible vaccination last day
+                vaccination_day_index <- day_index - 1
+                
+                # Re-use last available vaccination rates
+                if(vaccination_day_index > nrow(vaccination_perday_mat)) {
+                  vaccination_day_index <- nrow(vaccination_perday_mat)
                 }
-              }
-
-              if(PREV_STATE_NAME == "received_dose1" &&
-                 vaccination_perday_mat[vaccination_day_index , "dose2"] > 0 &&
-                 (day_index - strtoi(infection_hist_mat[[person_id, "dose 1 on"]])) >= CONST_MIN_DAYS_TILL_SECOND_DOSE){
-
-                dose2_prob <- vaccination_perday_mat[vaccination_day_index , "dose2"] / CONST_NB_POP
-
-                # Force negative fractions to 0, to counteract artifacts in the data
-                if(dose2_prob < 0) { dose2_prob = 0 }
-
-                else if( this_vaccination_chance <= dose2_prob){
-                  prev_state_id <- which( colnames(transition_matrix) == "received_dose2" )
-
-                  # Set state
-                  STATE[person_id, day_index - 1] <- prev_state_id
-
-                  # Book keeping
-                  infection_hist_mat[person_id, "dose 2 on"] <- day_index - 1
+                
+                if(PREV_STATE_NAME == "susceptible" &&
+                   vaccination_perday_mat[vaccination_day_index , "dose1"] > 0){
+                  
+                  dose1_prob <- vaccination_perday_mat[vaccination_day_index , "dose1"] / CONST_NB_POP
+                  
+                  # Force negative fractions to 0, to counteract artifacts in the data
+                  if(dose1_prob < 0) { dose1_prob = 0 }
+                  
+                  else if( this_vaccination_chance <= dose1_prob){
+                    prev_state_id <- which( colnames(transition_matrix) == "received_dose1" )
+                    
+                    # Set state
+                    STATE[person_id, day_index - 1] <- prev_state_id
+                    
+                    # Book keeping
+                    infection_hist_mat[person_id, "dose 1 on"] <- day_index - 1
+                    
+                    # For iterator sets 
+                    agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, person_id)
+                  }
                 }
-              }
-
-
-              # Reload states
-              # PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
-              # PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
-
-            } # End of last days vaccination prob
+                
+                if(PREV_STATE_NAME == "received_dose1" &&
+                   vaccination_perday_mat[vaccination_day_index , "dose2"] > 0 &&
+                   (day_index - strtoi(infection_hist_mat[[person_id, "dose 1 on"]])) >= CONST_MIN_DAYS_TILL_SECOND_DOSE){
+                  
+                  dose2_prob <- vaccination_perday_mat[vaccination_day_index , "dose2"] / CONST_NB_POP
+                  
+                  # Force negative fractions to 0, to counteract artifacts in the data
+                  if(dose2_prob < 0) { dose2_prob = 0 }
+                  
+                  else if( this_vaccination_chance <= dose2_prob){
+                    prev_state_id <- which( colnames(transition_matrix) == "received_dose2" )
+                    
+                    # Set state
+                    STATE[person_id, day_index - 1] <- prev_state_id
+                    
+                    # Book keeping
+                    infection_hist_mat[person_id, "dose 2 on"] <- day_index - 1
+                    
+                    # For iterator sets 
+                    agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, person_id)
+                  }
+                }
+                
+                
+                # Reload states
+                # PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
+                # PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
+                
+              } # End of last days vaccination prob
+            } # End of for loop
           }
-        }
+        } # End of vaccination
 
 
         # Tag: @calib10
@@ -3667,6 +3947,10 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
           # Note: for other models need to implement statelist (STATELIST_ASYMPTOMATIC_INFECTIOUS_TEST_SEEKER, STATELIST_NOT_INFECTED_TEST_SEEKER) based helper functions
           # Note: for vaccination based model need to exclude agents who were vaccinated yesterday from STATELIST_NOT_INFECTED_TEST_SEEKER
           list_asymptomatic_test_seeker_ids <- previous_day_susceptible_person_ids
+          
+          # Exclude agents who were vaccinated yesterday
+          list_asymptomatic_test_seeker_ids <- setdiff(list_asymptomatic_test_seeker_ids, agents_vaccinated_yesterday)
+          
           count_total_seeker <- length(list_asymptomatic_test_seeker_ids)
           # Draw which of the agents requests for test
           sampled_indices_of_test_seeker_ids <- which(runif(count_total_seeker) < rep(CONST_ASYMPTOMATIC_TEST_CHANCE, count_total_seeker))
@@ -4458,6 +4742,9 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                 # Note: This is applicable for models that does not require isolation while waiting for test results with result delay of 1 or more days
                 not_tested_yesterday_neighbours_agent_ids <- setdiff(all_contact_traced_neighbour_agent_ids, same_day_tested_yesterday_ids)
                 
+                # Exclude vaccinated yesterday
+                # Note: This needs to be extended for 14~30 days depending on the testing accuracy post vaccination 
+                not_tested_yesterday_neighbours_agent_ids <- setdiff(not_tested_yesterday_neighbours_agent_ids, agents_vaccinated_yesterday)
                 
                 # Debug:
                 # cat("\n Sim day:", day_index, " checking tracing for day: ", day_index - 1)
@@ -5290,6 +5577,29 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                         cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
                       }
                       
+                    } else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination") {
+                      
+                      if (PREV_STATE_NAME == "susceptible"){
+                        # Infection event for un-vaccinated
+                        next_state_id <- which(STATE_NAMES == "00_infected")
+                        
+                      } else if (PREV_STATE_NAME == "received_dose1"){
+                        # Infection event for un-vaccinated
+                        next_state_id <- which(STATE_NAMES == "01_infected")
+                        
+                      } else if (PREV_STATE_NAME == "received_dose2"){
+                        # Infection event for un-vaccinated
+                        next_state_id <- which(STATE_NAMES == "02_infected")
+                        
+                      } else if (PREV_STATE_NAME == "received_dose3"){
+                        # Infection event for un-vaccinated
+                        next_state_id <- which(STATE_NAMES == "03_infected")
+                        
+                      } else {
+                        # Debug:
+                        cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
+                      }
+                      
                     } else {
 
                       cat("\n [WARNING] Iterating over susceptibles, Infectious state assignment for Aggregated Contact Matrix has not been implemented for disease model: ", CONST_CHOSEN_DISEASE_MODEL)
@@ -5509,6 +5819,29 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                           cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
                         }
                         
+                      } else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination") {
+                        
+                        if (PREV_STATE_NAME == "susceptible"){
+                          # Infection event for un-vaccinated
+                          next_state_id <- which(STATE_NAMES == "00_infected")
+                          
+                        } else if (PREV_STATE_NAME == "received_dose1"){
+                          # Infection event for un-vaccinated
+                          next_state_id <- which(STATE_NAMES == "01_infected")
+                          
+                        } else if (PREV_STATE_NAME == "received_dose2"){
+                          # Infection event for un-vaccinated
+                          next_state_id <- which(STATE_NAMES == "02_infected")
+                          
+                        } else if (PREV_STATE_NAME == "received_dose3"){
+                          # Infection event for un-vaccinated
+                          next_state_id <- which(STATE_NAMES == "03_infected")
+                          
+                        } else {
+                          # Debug:
+                          cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
+                        }
+                        
                       } else {
 
                         cat("\n [WARNING] Iterating over susceptibles, Infectious state assignment for Locationn based Contact Matrix has not been implemented for disease model: ", CONST_CHOSEN_DISEASE_MODEL)
@@ -5559,78 +5892,159 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
         # cat("   \n Iterating on Infectors")
 
         # Tag: @Vaccination Rates "Did anyone get vaccinated yesterday?"
-        if (CONST_CHOSEN_DISEASE_MODEL == "Complex"){
-          for (person_id in previous_day_susceptible_person_ids){
-
-            # Get state of this person from previous day
-            PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
-            PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX] # Note: At this point STATE_NAME is a matrix, by the end of execution it's converted to df for CSV IO
-
-            # Vaccination state changes during simulation time
-            # -------------------
-            # Check if the person may have been vaccinated last simulation day
-            # i.e. is in succeptible or received_dose_1 state
-            # This breaks new evolution function: NO_OF_VACCINATION_DATA_BASED_TRANSITION <- length(which( POSSIBLE_TRANSITIONS_mat[ , "transition_weights"] == "CALCULATE_FROM_VACCINATION_DATA"))
-
-            this_vaccination_chance = runif(1)
-
-            if(PREV_STATE_NAME == "susceptible" || PREV_STATE_NAME == "received_dose1"){
-
-              # Get vaccination data and roll dice for possible vaccination last day
-              vaccination_day_index <- day_index - 1
-
-              # Re-use last available vaccination rates
-              if(vaccination_day_index > nrow(vaccination_perday_mat)) {
-                vaccination_day_index <- nrow(vaccination_perday_mat)
-              }
-
-              if(PREV_STATE_NAME == "susceptible" &&
-                 vaccination_perday_mat[vaccination_day_index , "dose1"] > 0){
-
-                dose1_prob <- vaccination_perday_mat[vaccination_day_index , "dose1"] / CONST_NB_POP
-
-                # Force negative fractions to 0, to counteract artifacts in the data
-                if(dose1_prob < 0) { dose1_prob = 0 }
-
-                else if( this_vaccination_chance <= dose1_prob){
-                  prev_state_id <- which( colnames(transition_matrix) == "received_dose1" )
-
-                  # Set state
-                  STATE[person_id, day_index - 1] <- prev_state_id
-
-                  # Book keeping
-                  infection_hist_mat[person_id, "dose 1 on"] <- day_index - 1
+        # Refresh list of vaccinated agents
+        agents_vaccinated_yesterday = c()
+        
+        if (CONST_ENABLE_VACCINATION && (CONST_CHOSEN_DISEASE_MODEL == "Complex" || CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination" )) {
+          
+          # Vaccination rate is constant
+          if(CONST_STATIC_VACCINATION_RATE){
+            
+            
+            # Gather agents who may be vaccinated 
+            previous_day_dose0 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "susceptible")]
+            previous_day_dose1 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose1")]
+            previous_day_dose2 <- previous_day_susceptible_person_ids[which(STATE_NAMES[STATE[previous_day_susceptible_person_ids, day_index - 1]] == "received_dose2")]
+            
+         
+            # Debug: 
+            # cat("\nTo Vaccinate Susceptible: \n")
+            # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_dose0, day_index - 1]])))
+            # 
+            # cat("\nTo Vaccinate Received dose 1: \n")
+            # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_dose1, day_index - 1]])))
+            # 
+            # cat("\nTo Vaccinate Received dose 2: \n")
+            # print(as.data.frame(table(STATE_NAMES[STATE[previous_day_dose2, day_index - 1]])))
+            
+            # 0 to 1st dose transition 
+            vaccination_chance_to_dose1 = as.numeric(transition_matrix["susceptible", "received_dose1"])
+            vaccination_coin_flips_dose1 = runif(length(previous_day_dose0))
+            vaccinated_to_dose1 = previous_day_dose0[which(vaccination_coin_flips_dose1 <= vaccination_chance_to_dose1)]
+            STATE[vaccinated_to_dose1 , day_index - 1] = which(STATE_NAMES == "received_dose1")
+            
+            if(length(vaccinated_to_dose1) > 0){
+              # Book keeping
+              infection_hist_mat[vaccinated_to_dose1, "dose 1 on"] <- day_index - 1
+              # For iterator sets 
+              agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, vaccinated_to_dose1)
+            }
+            
+            
+            
+            # 1st to 2nd dose transition
+            vaccination_chance_to_dose2 = as.numeric(transition_matrix["received_dose1", "received_dose2"])
+            vaccination_coin_flips_dose2 = runif(length(previous_day_dose1))
+            vaccinated_to_dose2 = previous_day_dose1[which(vaccination_coin_flips_dose2 <= vaccination_chance_to_dose2)]
+            STATE[vaccinated_to_dose2 , day_index - 1] = which(STATE_NAMES == "received_dose2")
+            
+            if(length(vaccinated_to_dose2) > 0){
+              # Book keeping
+              infection_hist_mat[vaccinated_to_dose2, "dose 2 on"] <- day_index - 1
+              # For iterator sets 
+              agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, vaccinated_to_dose2)
+            }
+            
+            
+            
+            
+            # 2md to 3rd dose transition
+            vaccination_chance_to_dose3 = as.numeric(transition_matrix["received_dose2", "received_dose3"])
+            vaccination_coin_flips_dose3 = runif(length(previous_day_dose2))
+            vaccinated_to_dose3 = previous_day_dose2[which(vaccination_coin_flips_dose3 <= vaccination_chance_to_dose3)]
+            STATE[vaccinated_to_dose3 , day_index - 1] = which(STATE_NAMES == "received_dose3")
+            
+            if(length(vaccinated_to_dose3) > 0){
+              # Book keeping
+              infection_hist_mat[vaccinated_to_dose3, "dose 3 on"] <- day_index - 1
+              # For iterator sets 
+              agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, vaccinated_to_dose3)
+            }
+            
+            
+            
+            
+            
+          } else {
+            # Vaccination rate from observed rates
+            for (person_id in previous_day_susceptible_person_ids){
+              
+              # Get state of this person from previous day
+              PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
+              PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX] # Note: At this point STATE_NAME is a matrix, by the end of execution it's converted to df for CSV IO
+              
+              # Vaccination state changes during simulation time
+              # -------------------
+              # Check if the person may have been vaccinated last simulation day
+              # i.e. is in succeptible or received_dose_1 state
+              # This breaks new evolution function: NO_OF_VACCINATION_DATA_BASED_TRANSITION <- length(which( POSSIBLE_TRANSITIONS_mat[ , "transition_weights"] == "CALCULATE_FROM_VACCINATION_DATA"))
+              
+              this_vaccination_chance = runif(1)
+              
+              if(PREV_STATE_NAME == "susceptible" || PREV_STATE_NAME == "received_dose1"){
+                
+                # Get vaccination data and roll dice for possible vaccination last day
+                vaccination_day_index <- day_index - 1
+                
+                # Re-use last available vaccination rates
+                if(vaccination_day_index > nrow(vaccination_perday_mat)) {
+                  vaccination_day_index <- nrow(vaccination_perday_mat)
                 }
-              }
-
-              if(PREV_STATE_NAME == "received_dose1" &&
-                 vaccination_perday_mat[vaccination_day_index , "dose2"] > 0 &&
-                 (day_index - strtoi(infection_hist_mat[[person_id, "dose 1 on"]])) >= CONST_MIN_DAYS_TILL_SECOND_DOSE){
-
-                dose2_prob <- vaccination_perday_mat[vaccination_day_index , "dose2"] / CONST_NB_POP
-
-                # Force negative fractions to 0, to counteract artifacts in the data
-                if(dose2_prob < 0) { dose2_prob = 0 }
-
-                else if( this_vaccination_chance <= dose2_prob){
-                  prev_state_id <- which( colnames(transition_matrix) == "received_dose2" )
-
-                  # Set state
-                  STATE[person_id, day_index - 1] <- prev_state_id
-
-                  # Book keeping
-                  infection_hist_mat[person_id, "dose 2 on"] <- day_index - 1
+                
+                if(PREV_STATE_NAME == "susceptible" &&
+                   vaccination_perday_mat[vaccination_day_index , "dose1"] > 0){
+                  
+                  dose1_prob <- vaccination_perday_mat[vaccination_day_index , "dose1"] / CONST_NB_POP
+                  
+                  # Force negative fractions to 0, to counteract artifacts in the data
+                  if(dose1_prob < 0) { dose1_prob = 0 }
+                  
+                  else if( this_vaccination_chance <= dose1_prob){
+                    prev_state_id <- which( colnames(transition_matrix) == "received_dose1" )
+                    
+                    # Set state
+                    STATE[person_id, day_index - 1] <- prev_state_id
+                    
+                    # Book keeping
+                    infection_hist_mat[person_id, "dose 1 on"] <- day_index - 1
+                    
+                    # For iterator sets 
+                    agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, person_id)
+                  }
                 }
-              }
-
-
-              # Reload states
-              # PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
-              # PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
-
-            } # End of last days vaccination prob
+                
+                if(PREV_STATE_NAME == "received_dose1" &&
+                   vaccination_perday_mat[vaccination_day_index , "dose2"] > 0 &&
+                   (day_index - strtoi(infection_hist_mat[[person_id, "dose 1 on"]])) >= CONST_MIN_DAYS_TILL_SECOND_DOSE){
+                  
+                  dose2_prob <- vaccination_perday_mat[vaccination_day_index , "dose2"] / CONST_NB_POP
+                  
+                  # Force negative fractions to 0, to counteract artifacts in the data
+                  if(dose2_prob < 0) { dose2_prob = 0 }
+                  
+                  else if( this_vaccination_chance <= dose2_prob){
+                    prev_state_id <- which( colnames(transition_matrix) == "received_dose2" )
+                    
+                    # Set state
+                    STATE[person_id, day_index - 1] <- prev_state_id
+                    
+                    # Book keeping
+                    infection_hist_mat[person_id, "dose 2 on"] <- day_index - 1
+                    
+                    # For iterator sets 
+                    agents_vaccinated_yesterday <- c(agents_vaccinated_yesterday, person_id)
+                  }
+                }
+                
+                
+                # Reload states
+                # PREV_STATE_INDEX <- as.numeric(STATE[person_id, day_index - 1])
+                # PREV_STATE_NAME <- STATE_NAMES[PREV_STATE_INDEX]
+                
+              } # End of last days vaccination prob
+            } # End of for loop
           }
-        }
+        } # End of vaccination
 
 
         # Tag: @calib10
@@ -5663,6 +6077,10 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
           # Note: for other models need to implement statelist (STATELIST_ASYMPTOMATIC_INFECTIOUS_TEST_SEEKER, STATELIST_NOT_INFECTED_TEST_SEEKER) based helper functions
           # Note: for vaccination based model need to exclude agents who were vaccinated yesterday from STATELIST_NOT_INFECTED_TEST_SEEKER
           list_asymptomatic_test_seeker_ids <- previous_day_susceptible_person_ids
+          
+          # Exclude agents who were vaccinated yesterday
+          list_asymptomatic_test_seeker_ids <- setdiff(list_asymptomatic_test_seeker_ids, agents_vaccinated_yesterday)
+          
           count_total_seeker <- length(list_asymptomatic_test_seeker_ids)
           # Draw which of the agents requests for test
           sampled_indices_of_test_seeker_ids <- which(runif(count_total_seeker) < rep(CONST_ASYMPTOMATIC_TEST_CHANCE, count_total_seeker))
@@ -6451,6 +6869,10 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                 # Note: This is applicable for models that does not require isolation while waiting for test results with result delay of 1 or more days
                 not_tested_yesterday_neighbours_agent_ids <- setdiff(all_contact_traced_neighbour_agent_ids, same_day_tested_yesterday_ids)
                 
+                # Exclude vaccinated yesterday
+                # Note: This needs to be extended for 14~30 days depending on the testing accuracy post vaccination 
+                not_tested_yesterday_neighbours_agent_ids <- setdiff(not_tested_yesterday_neighbours_agent_ids, agents_vaccinated_yesterday)
+                
 
                 # Debug:
                 # cat("\n Sim day:", day_index, " checking tracing for day: ", day_index - 1)
@@ -7171,6 +7593,29 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                     cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
                   }
 
+                } else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination") {
+                  
+                  if (PREV_STATE_NAME == "susceptible"){
+                    # Infection event for un-vaccinated
+                    next_state_id <- which(STATE_NAMES == "00_infected")
+                    
+                  } else if (PREV_STATE_NAME == "received_dose1"){
+                    # Infection event for person with 1 dose
+                    next_state_id <- which(STATE_NAMES == "01_infected")
+                    
+                  } else if (PREV_STATE_NAME == "received_dose2"){
+                    # Infection event for person with 2 dose
+                    next_state_id <- which(STATE_NAMES == "02_infected")
+                    
+                  } else if (PREV_STATE_NAME == "received_dose3"){
+                    # Infection event for person with 3 dose
+                    next_state_id <- which(STATE_NAMES == "03_infected")
+                    
+                  } else {
+                    # Debug:
+                    cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
+                  }
+                  
                 } else {
 
                   cat("\n [WARNING] Iterating over infectious, Infectious state assignment for Aggregated Contact Matrix has not been implemented for disease model: ", CONST_CHOSEN_DISEASE_MODEL)
@@ -7432,6 +7877,29 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
                       cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
                     }
 
+                  } else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination") {
+                    
+                    if (PREV_STATE_NAME == "susceptible"){
+                      # Infection event for un-vaccinated
+                      next_state_id <- which(STATE_NAMES == "00_infected")
+                      
+                    } else if (PREV_STATE_NAME == "received_dose1"){
+                      # Infection event for person with 1 dose
+                      next_state_id <- which(STATE_NAMES == "01_infected")
+                      
+                    } else if (PREV_STATE_NAME == "received_dose2"){
+                      # Infection event for person with 2 dose
+                      next_state_id <- which(STATE_NAMES == "02_infected")
+                      
+                    } else if (PREV_STATE_NAME == "received_dose3"){
+                      # Infection event for person with 3 dose
+                      next_state_id <- which(STATE_NAMES == "03_infected")
+                      
+                    } else {
+                      # Debug:
+                      cat("\n[WARNING] Cannot find post-infection state for person_id: ",  susceptible_agent_id, " (", PREV_STATE_NAME, "), with infectee_id: " ,  infector_id, ", with variant: ", infection_hist_mat[infector_id, "variant"], "\n", sep = "")
+                    }
+                    
                   } else {
 
                     cat("\n [WARNING] Iterating over infectious, Infectious state assignment for Location based Contact Matrix has not been implemented for disease model: ", CONST_CHOSEN_DISEASE_MODEL)
@@ -7493,8 +7961,9 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
       # Check for transitions into active infections (Book-keeping)
 
-      # For "SIR" iterate over moved_to_non_susceptible_today
-      if(CONST_CHOSEN_DISEASE_MODEL == "SIR"){
+      # For "SIR" or "SIR + Vaccination" iterate over moved_to_non_susceptible_today
+      if(CONST_CHOSEN_DISEASE_MODEL == "SIR" || 
+         CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination"){
         if(length(moved_to_non_susceptible_today) > 0) {
           for(person_id in moved_to_non_susceptible_today){
 
@@ -7505,9 +7974,20 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
             next_state_name <- STATE_NAMES[next_state_id]
 
             if( next_state_id %in% STATELIST_NEW_CASES ) {
-              # Edge: "susceptible", "infected"
-              if((PREV_STATE_NAME == "susceptible") && (next_state_name == "infected")){
-                COUNT_NEW_INFECTIONS_TODAY <- COUNT_NEW_INFECTIONS_TODAY + 1
+              if(CONST_CHOSEN_DISEASE_MODEL == "SIR"){
+                # Edge: "susceptible", "infected"
+                if((PREV_STATE_NAME == "susceptible") && (next_state_name == "infected")){
+                  COUNT_NEW_INFECTIONS_TODAY <- COUNT_NEW_INFECTIONS_TODAY + 1
+                }
+              } else if(CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination"){
+                # Edge: "susceptible | received_dosex", "xxinfected"
+                if( ((PREV_STATE_NAME == "susceptible") && (next_state_name == "00_infected")) || 
+                    ((PREV_STATE_NAME == "received_dose1") && (next_state_name == "01_infected")) || 
+                    ((PREV_STATE_NAME == "received_dose2") && (next_state_name == "02_infected")) || 
+                    ((PREV_STATE_NAME == "received_dose3") && (next_state_name == "03_infected"))) {
+                  COUNT_NEW_INFECTIONS_TODAY <- COUNT_NEW_INFECTIONS_TODAY + 1
+                }
+                
               }
             }
 
@@ -7666,7 +8146,8 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
 
 
       if( (CONST_CHOSEN_DISEASE_MODEL == "SIR") ||
-          (CONST_CHOSEN_DISEASE_MODEL == "Complex")){
+          (CONST_CHOSEN_DISEASE_MODEL == "Complex") ||
+          (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination") ){
         # For models without test based new case discovery
         DAILY_NEW_CASES[day_index] <- COUNT_NEW_INFECTIONS_TODAY
       } else if ( (CONST_CHOSEN_DISEASE_MODEL == "SIR + Testing + Isolation") ||
@@ -8146,13 +8627,13 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
     # Randomly distribute the infection import
     # first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
 
-    # first_disease_import <- sample(init_list_of_person_with_0_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
+    first_disease_import <- sample(init_list_of_person_with_0_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
     # first_disease_import <- sample(init_list_of_person_with_1_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
     # first_disease_import <- sample(init_list_of_person_with_2_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
     # first_disease_import <- sample(init_list_of_person_with_3_dose, COUNT_FIRST_DAY_DISEASE_IMPORT)
 
     # Randomly distribute the infection import
-    first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
+    # first_disease_import <- sample(seq_len(length(STATE[ , 1])), COUNT_FIRST_DAY_DISEASE_IMPORT) # Worked when there were 0 vaccinated on the 1st day
     # Freezing disease import to agent 1, 2, 3 and 4 as decided with Robert and Jarod
     # first_disease_import <- c(1, 2, 3, 4)
 
@@ -8288,6 +8769,26 @@ for(run_index in 1:TOTAL_SIMULATION_RUNS){
         if(present_state == which(colnames(transition_matrix) == "susceptible")){
           infected_state <- which(colnames(transition_matrix) == "(unconfirmed) infected")
 
+        }
+      } else if (CONST_CHOSEN_DISEASE_MODEL == "SIR + Vaccination"){
+        
+        if(present_state == which(colnames(transition_matrix) == "susceptible")){
+          # No vaccination
+          
+          infected_state <- which(colnames(transition_matrix) == "00_infected")
+          
+        } else if(present_state == which(colnames(transition_matrix) == "received_dose1")){
+          # 1 Dose of vaccine
+          infected_state <- which(colnames(transition_matrix) == "01_infected")
+          
+        } else if(present_state == which(colnames(transition_matrix) == "received_dose2")){
+          # 2 Dose of Vaccine
+          infected_state <- which(colnames(transition_matrix) == "02_infected")
+          
+        } else if(present_state == which(colnames(transition_matrix) == "received_dose3")){
+          # 3 Dose of Vaccine
+          infected_state <- which(colnames(transition_matrix) == "03_infected")
+          
         }
       } else {
 
