@@ -3,7 +3,7 @@
 ## Scenario Index
 * [Reactive intervention](#reactive-intervention)
 * [Superspreading behaviour](#superspreading-bheaviour)
-* [Scenario C](#scenario-c)
+
 
 
 ## Reactive intervention on observable data
@@ -23,4 +23,3 @@ Early results from the contagion simulator suggests, it may be an useful tool to
 ![Social Gathering: Complex Disease Model](/fig/Events_with_close_proximity.svg)
 <img src="./fig/Events_with_close_proximity.svg">
 
-## Scenario C
